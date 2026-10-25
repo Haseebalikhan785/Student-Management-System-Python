@@ -1,0 +1,12 @@
+[project]
+name = "student-management-system-in-python"
+version = "0.1.0"
+description = "A student management system built in Python."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mysql-connector-python>=9.7.0",
+    "pillow>=12.3.0",
+    "tkcalendar>=1.6.1",
+    "tktooltip>=1.2.0",
+]
