@@ -14,6 +14,7 @@
       {% if g.user.typeofuser in ['admin', 'superadmin'] %}
         <a href="{{ url_for('records', record_type='students') }}">Students</a>
         <a href="{{ url_for('records', record_type='faculty') }}">Faculty</a>
+        <a href="{{ url_for('fees_manage') }}">Fees</a>
         {% if g.user.typeofuser == 'superadmin' %}<a href="{{ url_for('records', record_type='admins') }}">Admins</a>{% endif %}
       {% elif g.user.typeofuser == 'faculty' %}
         <a href="{{ url_for('records', record_type='students') }}">Students</a>
@@ -24,6 +25,7 @@
         <a href="{{ url_for('student_fees') }}">Fees</a>
       {% endif %}
       <span class="account">{{ g.user.uname }}</span>
+      <a href="{{ url_for('change_password') }}">Password</a>
       <form method="post" action="{{ url_for('logout') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="link-button" type="submit">Sign out</button>

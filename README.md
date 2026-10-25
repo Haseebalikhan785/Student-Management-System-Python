@@ -95,9 +95,9 @@ This project is distributed under the GNU General Public License v3.0. See [LICE
 
 ## Browser-based edition
 
-This repository also includes a browser-based edition in `webapp.py`. The original Tkinter desktop app remains available through `python app.py`.
+This repository includes both the original Tkinter desktop app and a browser edition in `webapp.py`. Render runs the browser edition; the desktop app remains available through `python app.py` on a computer with a desktop environment.
 
-The browser version supports sign-in for the existing student, faculty, admin, and superadmin accounts. Students can view their profile, fee history, and monthly attendance. Faculty can view students, choose their class-teacher assignment, and record attendance. Administrators can view student and faculty directories; superadmins can also view administrators.
+The browser edition supports role-based sign-in and dashboards. Superadmins can manage administrator accounts; admins and superadmins can create, search, update, and remove student and faculty records, maintain yearly fee plans, record student fee payments, and take attendance. Faculty can view student records, assign their class, and record attendance for that class. Students can view their profile, fee history, and attendance history. New student, faculty, and admin records receive an account ID and a login in one transaction. The browser app also creates missing keyed fee, attendance, and class-assignment tables on first connection; this handles MySQL hosts that reject the original no-primary-key table definitions.
 
 ### Run locally
 
@@ -111,4 +111,4 @@ The browser version supports sign-in for the existing student, faculty, admin, a
 
 The included `render.yaml` prepares a Render web service. In Render, create a Blueprint from this repository, connect a reachable MySQL database, and enter its connection settings as the prompted environment variables. Keep the database private and use a strong, unique superadmin password. Render will provide the web URL and redeploy when the linked Git branch is updated.
 
-This is an academic project starter, not a production school information system. Before putting real student data online, replace the legacy SHA-256 password storage with a modern password-hashing scheme, add account recovery and administrative record-management workflows, and review privacy, backup, and access-control requirements. The sample superadmin login (`admin` / `admin1234`) has been removed from the SQL setup script.
+This is an academic project, not a production school information system. Before putting real student data online, review privacy, backup, and access-control requirements. Keep database credentials in the host's private environment settings and never commit them. The sample superadmin login (`admin` / `admin1234`) has been removed from the SQL setup script.

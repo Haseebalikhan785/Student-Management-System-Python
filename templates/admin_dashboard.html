@@ -5,9 +5,16 @@
 <h1>Welcome, {{ g.user.uname }}</h1>
 <p class="muted">Choose a section to view school records.</p>
 <div class="cards">
-  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>{{ totals.students }}</strong><small>View student directory</small></a>
-  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}"><span>Faculty</span><strong>{{ totals.faculty }}</strong><small>View faculty directory</small></a>
-  {% if g.user.typeofuser == 'superadmin' %}<a class="stat-card" href="{{ url_for('records', record_type='admins') }}"><span>Administrators</span><strong>{{ totals.admins }}</strong><small>View administrators</small></a>{% endif %}
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>{{ totals.students }}</strong><small>Browse, search, and manage students →</small></a>
+  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}"><span>Faculty</span><strong>{{ totals.faculty }}</strong><small>Browse, search, and manage faculty →</small></a>
+  {% if g.user.typeofuser == 'superadmin' %}<a class="stat-card" href="{{ url_for('records', record_type='admins') }}"><span>Administrators</span><strong>{{ totals.admins }}</strong><small>Manage administrator accounts →</small></a>{% endif %}
 </div>
-<div class="panel"><h2>Online edition</h2><p>This browser version provides secure sign-in, directory views, and attendance tools. The original desktop app remains available in this repository.</p></div>
+<div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h2>Manage your school</h2></div></div>
+<div class="cards quick-actions">
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='students') }}"><span>＋ Add student</span><small>Create a student profile and login.</small></a>
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='faculty') }}"><span>＋ Add faculty</span><small>Create a faculty profile and login.</small></a>
+  <a class="stat-card" href="{{ url_for('fees_manage') }}"><span>₹ Fee management</span><small>Set fee plans and record payments.</small></a>
+  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>✓ Take attendance</span><small>Record attendance for today or another date.</small></a>
+</div>
+{% if g.user.typeofuser == 'superadmin' %}<p class="muted">Super administrator: you can also <a href="{{ url_for('create_record_page', record_type='admins') }}">add an administrator</a>.</p>{% endif %}
 {% endblock %}

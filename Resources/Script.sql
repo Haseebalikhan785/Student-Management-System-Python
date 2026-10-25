@@ -73,9 +73,9 @@ CREATE TABLE student (
 
 # create table for assigining the class teacher
 CREATE TABLE div_details (
-    std INT,
-    divison CHAR(1),
-    faculty_id VARCHAR(8),
+    std INT NOT NULL,
+    divison CHAR(1) NOT NULL,
+    faculty_id VARCHAR(8) NOT NULL PRIMARY KEY,
     FOREIGN KEY (faculty_id)
         REFERENCES faculty(id)
         ON DELETE NO ACTION
@@ -115,6 +115,8 @@ CREATE TABLE fees (
     nov ENUM('Y', 'N'),
     dece ENUM('Y', 'N'),
 
+    PRIMARY KEY (id, year_),
+
     FOREIGN KEY (id)
         REFERENCES student(id)
         ON DELETE CASCADE
@@ -134,11 +136,20 @@ CREATE TABLE present (
 # creating a table for the attendance
 CREATE TABLE attendance (
     id VARCHAR(8) NOT NULL,
-    attended ENUM('Y', 'N'),
-    date_attend DATE,
+    attended ENUM('Y', 'N') NOT NULL,
+    date_attend DATE NOT NULL,
+
+    PRIMARY KEY (id, date_attend),
+
+    FOREIGN KEY (id)
+        REFERENCES student(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
 
     FOREIGN KEY (date_attend)
         REFERENCES present(present_date)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 --  -------------------------------- Triggers ----------------------------------
@@ -235,7 +246,7 @@ BEGIN
     DECLARE ex_id INT;
     DECLARE returnid VARCHAR(8);
     SELECT COUNT(*) INTO noofro
-    FROM admin;
+    FROM student;
     id_label: LOOP
         SELECT id
         INTO rore
