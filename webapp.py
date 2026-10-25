@@ -491,7 +491,11 @@ def edit_record_page(record_type, user_id):
     if record_type not in RECORD_FIELDS or (record_type == "admins" and role != "superadmin"):
         abort(404)
     table = {"students":"student", "faculty":"faculty", "admins":"admin"}[record_type]
-    record = query(f"SELECT * FROM {table} WHERE id=%s", (user_id,), one=True)
+    if record_type == "admins":
+        record = query("SELECT id, NAME AS name, address, phoneno, age, sex FROM admin WHERE id=%s",
+                       (user_id,), one=True)
+    else:
+        record = query(f"SELECT * FROM {table} WHERE id=%s", (user_id,), one=True)
     account = query("SELECT uname FROM login_details WHERE id=%s", (user_id,), one=True)
     if not record or not account:
         abort(404)

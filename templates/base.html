@@ -15,6 +15,7 @@
         <a href="{{ url_for('records', record_type='students') }}">Students</a>
         <a href="{{ url_for('records', record_type='faculty') }}">Faculty</a>
         <a href="{{ url_for('fees_manage') }}">Fees</a>
+        <a href="{{ url_for('mark_attendance') }}">Attendance</a>
         {% if g.user.typeofuser == 'superadmin' %}<a href="{{ url_for('records', record_type='admins') }}">Admins</a>{% endif %}
       {% elif g.user.typeofuser == 'faculty' %}
         <a href="{{ url_for('records', record_type='students') }}">Students</a>
