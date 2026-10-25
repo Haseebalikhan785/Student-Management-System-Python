@@ -8,6 +8,8 @@ in a hosted environment.
 from __future__ import annotations
 
 import os
+import hashlib
+import hmac
 from threading import Lock
 from datetime import date
 from functools import wraps
@@ -15,6 +17,7 @@ from functools import wraps
 import mysql.connector
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import check_password_hash
 
 
 app = Flask(__name__)
@@ -120,6 +123,20 @@ def execute(sql, params=()):
         cursor.close()
     finally:
         connection.close()
+
+
+def password_matches(user, password):
+    stored = user["password"]
+    if stored.startswith(("scrypt:", "pbkdf2:")):
+        if not check_password_hash(stored, password):
+            return False
+        # A brief deployment may have upgraded the browser account hash. Put it
+        # back into the shared desktop/web format after a successful sign-in.
+        execute("UPDATE login_details SET password=SHA2(%s,256) WHERE id=%s",
+                (password, user["id"]))
+        return True
+    digest = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(stored, digest)
 
 
 def next_id(cursor, prefix, initial):
@@ -320,11 +337,10 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         user = query(
-            "SELECT id, uname, typeofuser FROM login_details "
-            "WHERE uname=%s AND password=SHA2(%s,256)",
-            (username, password), one=True,
+            "SELECT id, uname, typeofuser, password FROM login_details WHERE uname=%s",
+            (username,), one=True,
         )
-        if user:
+        if user and password_matches(user, password):
             session.clear()
             session.permanent = True
             session["user_id"] = user["id"]
