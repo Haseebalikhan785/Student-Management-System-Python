@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}My profile · Student Management{% endblock %}
+{% block content %}
+<p class="eyebrow">STUDENT PORTAL</p><h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
+<div class="panel profile-grid">
+  <div><span>Student ID</span><strong>{{ profile.id }}</strong></div>
+  <div><span>Class</span><strong>{{ profile.std }} · {{ profile.division }}</strong></div>
+  <div><span>Roll number</span><strong>{{ profile.roll_no }}</strong></div>
+  <div><span>Username</span><strong>{{ g.user.uname }}</strong></div>
+</div>
+<div class="cards two">
+  <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Attendance</span><strong>View</strong><small>See monthly attendance</small></a>
+  <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><strong>View</strong><small>See fees by academic year</small></a>
+</div>
+{% endblock %}

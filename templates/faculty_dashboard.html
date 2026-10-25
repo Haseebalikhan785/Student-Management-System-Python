@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Faculty dashboard · Student Management{% endblock %}
+{% block content %}
+<p class="eyebrow">FACULTY PORTAL</p><h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
+<div class="panel profile-grid">
+  <div><span>Faculty ID</span><strong>{{ profile.id }}</strong></div>
+  <div><span>Subject</span><strong>{{ profile.sub }}</strong></div>
+  <div><span>Email</span><strong>{{ profile.email }}</strong></div>
+  <div><span>Class assignment</span><strong>{% if assignment %}{{ assignment.std }} · {{ assignment.divison }}{% else %}Not assigned{% endif %}</strong></div>
+</div>
+<div class="cards two">
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>Open</strong><small>View student directory</small></a>
+  {% if assignment %}<a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Attendance</span><strong>Mark</strong><small>Record your assigned class</small></a>{% else %}<a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Class teacher</span><strong>Assign</strong><small>Select the class you teach</small></a>{% endif %}
+</div>
+{% endblock %}

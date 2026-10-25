@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} · Student Management{% endblock %}
+{% block content %}<p class="eyebrow">SCHOOL RECORDS</p><h1>{{ title }}</h1>
+<section class="panel table-wrap"><table><thead><tr>{% if rows %}{% for key in rows[0].keys() %}<th>{{ key|replace('_',' ')|title }}</th>{% endfor %}{% else %}<th>Records</th>{% endif %}</tr></thead><tbody>
+{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value if value is not none else '—' }}</td>{% endfor %}</tr>{% else %}<tr><td class="empty">No {{ record_type }} records found.</td></tr>{% endfor %}
+</tbody></table></section>{% endblock %}

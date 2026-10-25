@@ -92,3 +92,23 @@ Execute the application:
 This repository is an independently published copy maintained by Haseeb Ali. The original project was created by Prathamesh Dhande. Original source: https://github.com/PrathameshDhande22/Student-Management-System-in-Python.
 
 This project is distributed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full terms. Please retain this attribution and license when redistributing.
+
+## Browser-based edition
+
+This repository also includes a browser-based edition in `webapp.py`. The original Tkinter desktop app remains available through `python app.py`.
+
+The browser version supports sign-in for the existing student, faculty, admin, and superadmin accounts. Students can view their profile, fee history, and monthly attendance. Faculty can view students, choose their class-teacher assignment, and record attendance. Administrators can view student and faculty directories; superadmins can also view administrators.
+
+### Run locally
+
+1. Install and configure MySQL, then run `Resources/Script.sql`.
+2. Create a unique first superadmin account in `login_details`. The SQL file includes a commented example; choose a strong private password and do not commit it.
+3. Install the browser app dependencies with `python3 -m pip install -r requirements-web.txt`.
+4. Set `SECRET_KEY`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE` in your environment.
+5. Start the development server with `flask --app webapp run`.
+
+### Deploy to Render
+
+The included `render.yaml` prepares a Render web service. In Render, create a Blueprint from this repository, connect a reachable MySQL database, and enter its connection settings as the prompted environment variables. Keep the database private and use a strong, unique superadmin password. Render will provide the web URL and redeploy when the linked Git branch is updated.
+
+This is an academic project starter, not a production school information system. Before putting real student data online, replace the legacy SHA-256 password storage with a modern password-hashing scheme, add account recovery and administrative record-management workflows, and review privacy, backup, and access-control requirements. The sample superadmin login (`admin` / `admin1234`) has been removed from the SQL setup script.

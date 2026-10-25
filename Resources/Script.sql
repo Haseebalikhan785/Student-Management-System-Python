@@ -15,14 +15,10 @@ CREATE TABLE login_details(
     typeofuser VARCHAR(45) NOT NULL
 );
 
--- Enter the super admin details
-INSERT INTO login_details
-VALUES(
-    "SA100",
-    "admin",
-    SHA2("admin1234",256),
-    "superadmin"
-);
+-- Create the first superadmin manually after importing this schema. Do not use
+-- a shared default password for a publicly reachable deployment. For example:
+-- INSERT INTO login_details (id, uname, password, typeofuser)
+-- VALUES ('SA100', 'YOUR_UNIQUE_USERNAME', SHA2('YOUR_UNIQUE_LONG_PASSWORD', 256), 'superadmin');
 
 -- -------------------------------- Tables ---------------------------------- 
 

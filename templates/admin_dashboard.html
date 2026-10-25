@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · Student Management{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ g.user.typeofuser|replace('superadmin', 'super admin')|title }} workspace</p>
+<h1>Welcome, {{ g.user.uname }}</h1>
+<p class="muted">Choose a section to view school records.</p>
+<div class="cards">
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>{{ totals.students }}</strong><small>View student directory</small></a>
+  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}"><span>Faculty</span><strong>{{ totals.faculty }}</strong><small>View faculty directory</small></a>
+  {% if g.user.typeofuser == 'superadmin' %}<a class="stat-card" href="{{ url_for('records', record_type='admins') }}"><span>Administrators</span><strong>{{ totals.admins }}</strong><small>View administrators</small></a>{% endif %}
+</div>
+<div class="panel"><h2>Online edition</h2><p>This browser version provides secure sign-in, directory views, and attendance tools. The original desktop app remains available in this repository.</p></div>
+{% endblock %}

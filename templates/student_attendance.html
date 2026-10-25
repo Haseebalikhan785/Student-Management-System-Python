@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}My attendance · Student Management{% endblock %}
+{% block content %}<p class="eyebrow">STUDENT PORTAL</p><h1>Attendance history</h1>
+<section class="panel table-wrap"><table><thead><tr><th>Month</th><th>School days recorded</th><th>Days attended</th><th>Attendance</th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.year }}-{{ '%02d'|format(row.month) }}</td><td>{{ row.school_days }}</td><td>{{ row.attended_days or 0 }}</td><td>{% if row.school_days %}{{ ((row.attended_days or 0) / row.school_days * 100)|round(1) }}%{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="empty">No attendance has been recorded yet.</td></tr>{% endfor %}
+</tbody></table></section>{% endblock %}
