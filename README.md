@@ -97,6 +97,8 @@ This project is distributed under the GNU General Public License v3.0. See [LICE
 
 This repository includes both the original Tkinter desktop app and a browser edition in `webapp.py`. Render runs the browser edition; the desktop app remains available through `python app.py` on a computer with a desktop environment.
 
+**Live browser app:** [Student Management System](https://student-management-system-web-hbun.onrender.com/)
+
 The browser edition supports role-based sign-in and dashboards. Superadmins can manage administrator accounts; admins and superadmins can create, search, update, and remove student and faculty records, maintain yearly fee plans, record student fee payments, and take attendance. Faculty can view student records, assign their class, and record attendance for that class. Students can view their profile, fee history, and attendance history. New student, faculty, and admin records receive an account ID and a login in one transaction. The browser app also creates missing keyed fee, attendance, and class-assignment tables on first connection; this handles MySQL hosts that reject the original no-primary-key table definitions.
 
 ### Run locally
