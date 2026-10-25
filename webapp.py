@@ -7,6 +7,8 @@ in a hosted environment.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 from threading import Lock
 from datetime import date
@@ -15,6 +17,7 @@ from functools import wraps
 import mysql.connector
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 app = Flask(__name__)
@@ -122,6 +125,19 @@ def execute(sql, params=()):
         connection.close()
 
 
+def verify_login_password(user, password):
+    stored = user["password"]
+    if stored.startswith(("scrypt:", "pbkdf2:")):
+        return check_password_hash(stored, password)
+    legacy_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    if hmac.compare_digest(stored, legacy_hash):
+        # Upgrade old SHA-256 records as the account next signs in.
+        execute("UPDATE login_details SET password=%s WHERE id=%s",
+                (generate_password_hash(password), user["id"]))
+        return True
+    return False
+
+
 def next_id(cursor, prefix, initial):
     """Return the next unused legacy-style identifier (ST10000, FT10000, AD1000)."""
     cursor.execute(
@@ -212,8 +228,8 @@ def create_record(record_type, values, username, password):
             [user_id, *data],
         )
         cursor.execute(
-            "INSERT INTO login_details (id, uname, password, typeofuser) VALUES (%s,%s,SHA2(%s,256),%s)",
-            (user_id, username, password, role),
+            "INSERT INTO login_details (id, uname, password, typeofuser) VALUES (%s,%s,%s,%s)",
+            (user_id, username, generate_password_hash(password), role),
         )
         connection.commit()
         return user_id
@@ -247,8 +263,8 @@ def update_record(record_type, user_id, values, username, password):
         )
         if password:
             cursor.execute(
-                "UPDATE login_details SET uname=%s,password=SHA2(%s,256) WHERE id=%s",
-                (username, password, user_id),
+                "UPDATE login_details SET uname=%s,password=%s WHERE id=%s",
+                (username, generate_password_hash(password), user_id),
             )
         else:
             cursor.execute("UPDATE login_details SET uname=%s WHERE id=%s", (username, user_id))
@@ -320,11 +336,10 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         user = query(
-            "SELECT id, uname, typeofuser FROM login_details "
-            "WHERE uname=%s AND password=SHA2(%s,256)",
-            (username, password), one=True,
+            "SELECT id, uname, typeofuser, password FROM login_details WHERE uname=%s",
+            (username,), one=True,
         )
-        if user:
+        if user and verify_login_password(user, password):
             session.clear()
             session.permanent = True
             session["user_id"] = user["id"]
@@ -603,7 +618,8 @@ def change_password():
         elif password != confirm:
             flash("The passwords do not match.", "error")
         else:
-            execute("UPDATE login_details SET password=SHA2(%s,256) WHERE id=%s", (password, current_user()["id"]))
+            execute("UPDATE login_details SET password=%s WHERE id=%s",
+                    (generate_password_hash(password), current_user()["id"]))
             flash("Your password has been updated.", "success")
             return redirect(url_for("dashboard"))
     return render_template("change_password.html")
