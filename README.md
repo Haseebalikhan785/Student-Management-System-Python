@@ -84,12 +84,7 @@ Execute the application:
 
     py app.py
 
-### Author : Prathamesh Dhande
-
-
-## Maintainer
-
-This repository is an independently published copy maintained by Haseeb Ali. The original project was created by Prathamesh Dhande. Original source: https://github.com/PrathameshDhande22/Student-Management-System-in-Python.
+### Author & Maintainer : Haseeb Ali
 
 This project is distributed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full terms. Please retain this attribution and license when redistributing.
 
