@@ -1,4 +1,4 @@
-"""Browser-based edition of the Student Management System.
+"""Browser-based edition of the University Management System.
 
 The original Tkinter desktop application remains available through ``python app.py``.
 Run this web edition with ``flask --app webapp run`` during development or Gunicorn
@@ -96,6 +96,255 @@ def db_connection():
         CONSTRAINT fk_attendance_day FOREIGN KEY (date_attend) REFERENCES present(present_date)
             ON DELETE CASCADE ON UPDATE CASCADE
     ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS departments (
+        department_id VARCHAR(12) NOT NULL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS courses (
+        course_code VARCHAR(20) NOT NULL PRIMARY KEY,
+        department_id VARCHAR(12) NOT NULL,
+        title VARCHAR(120) NOT NULL,
+        credits DECIMAL(3,1) NOT NULL DEFAULT 3.0,
+        semester TINYINT UNSIGNED NOT NULL,
+        description TEXT,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_courses_department FOREIGN KEY (department_id) REFERENCES departments(department_id)
+            ON DELETE RESTRICT ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS faculty_courses (
+        faculty_id VARCHAR(8) NOT NULL,
+        course_code VARCHAR(20) NOT NULL,
+        academic_year VARCHAR(9) NOT NULL,
+        semester TINYINT UNSIGNED NOT NULL,
+        assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (faculty_id, course_code, academic_year, semester),
+        CONSTRAINT fk_faculty_courses_faculty FOREIGN KEY (faculty_id) REFERENCES faculty(id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_faculty_courses_course FOREIGN KEY (course_code) REFERENCES courses(course_code)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS course_enrollments (
+        enrollment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(8) NOT NULL,
+        course_code VARCHAR(20) NOT NULL,
+        academic_year VARCHAR(9) NOT NULL,
+        semester TINYINT UNSIGNED NOT NULL,
+        status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+        requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        reviewed_at TIMESTAMP NULL DEFAULT NULL,
+        UNIQUE KEY uq_student_course_term (student_id, course_code, academic_year, semester),
+        KEY ix_enrollment_status (status, academic_year, semester),
+        CONSTRAINT fk_enrollment_student FOREIGN KEY (student_id) REFERENCES student(id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_enrollment_course FOREIGN KEY (course_code) REFERENCES courses(course_code)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS course_attendance (
+        course_code VARCHAR(20) NOT NULL,
+        student_id VARCHAR(8) NOT NULL,
+        academic_year VARCHAR(9) NOT NULL,
+        semester TINYINT UNSIGNED NOT NULL,
+        attendance_date DATE NOT NULL,
+        attended ENUM('Y','N') NOT NULL,
+        marked_by VARCHAR(8) NOT NULL,
+        PRIMARY KEY (course_code, student_id, academic_year, semester, attendance_date),
+        KEY ix_course_attendance_date (attendance_date, course_code),
+        CONSTRAINT fk_course_attendance_course FOREIGN KEY (course_code) REFERENCES courses(course_code)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_course_attendance_student FOREIGN KEY (student_id) REFERENCES student(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS course_grades (
+        enrollment_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+        marks DECIMAL(6,2) NOT NULL DEFAULT 0,
+        maximum_marks DECIMAL(6,2) NOT NULL DEFAULT 100,
+        letter_grade VARCHAR(4) NOT NULL DEFAULT 'IP',
+        feedback TEXT,
+        updated_by VARCHAR(8) NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_course_grade_enrollment FOREIGN KEY (enrollment_id) REFERENCES course_enrollments(enrollment_id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS course_schedule (
+        schedule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        faculty_id VARCHAR(8) NOT NULL,
+        course_code VARCHAR(20) NOT NULL,
+        academic_year VARCHAR(9) NOT NULL,
+        semester TINYINT UNSIGNED NOT NULL,
+        weekday TINYINT UNSIGNED NOT NULL,
+        starts_at TIME NOT NULL,
+        ends_at TIME NOT NULL,
+        room VARCHAR(32) NOT NULL,
+        KEY ix_schedule_term (academic_year, semester, weekday, starts_at),
+        CONSTRAINT fk_schedule_assignment FOREIGN KEY (faculty_id, course_code, academic_year, semester)
+            REFERENCES faculty_courses(faculty_id, course_code, academic_year, semester)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS announcements (
+        announcement_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(160) NOT NULL,
+        body TEXT NOT NULL,
+        audience ENUM('all','student','faculty','staff') NOT NULL DEFAULT 'all',
+        created_by VARCHAR(12) NOT NULL,
+        published BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY ix_announcement_audience (published, audience, created_at)
+    ) ENGINE=InnoDB""")
+                cursor.executemany(
+                    "INSERT IGNORE INTO departments (department_id, name, description) VALUES (%s,%s,%s)",
+                    [
+                        ("SCI", "School of Science and Computing", "Computing, data, mathematics, and applied science."),
+                        ("BUS", "School of Business", "Management, accounting, economics, and entrepreneurship."),
+                        ("HUM", "School of Humanities", "Communication, languages, social inquiry, and writing."),
+                        ("ENG", "School of Engineering", "Engineering fundamentals and technology practice."),
+                    ],
+                )
+                cursor.executemany(
+                    "INSERT IGNORE INTO courses (course_code, department_id, title, credits, semester, description) VALUES (%s,%s,%s,%s,%s,%s)",
+                    [
+                        ("CSE101", "SCI", "Programming Fundamentals", 4.0, 1, "Problem solving, programming concepts, and practical software development."),
+                        ("CSE102", "SCI", "Discrete Mathematics", 4.0, 1, "Logic, sets, relations, graphs, and foundations of computing."),
+                        ("CSE201", "SCI", "Data Structures", 4.0, 2, "Core data structures, algorithm analysis, and implementation."),
+                        ("CSE202", "SCI", "Database Systems", 4.0, 2, "Relational data modelling, SQL, transactions, and database design."),
+                        ("CSE301", "SCI", "Web Application Development", 3.0, 3, "Server-side applications, accessible interfaces, and web architecture."),
+                        ("CSE302", "SCI", "Computer Networks", 3.0, 3, "Network architecture, protocols, security fundamentals, and diagnostics."),
+                        ("MAT101", "SCI", "Calculus and Linear Algebra", 4.0, 1, "Differential and integral calculus with introductory linear algebra."),
+                        ("MAT202", "SCI", "Probability and Statistics", 3.0, 2, "Probability, descriptive statistics, sampling, and inference."),
+                        ("ENG101", "ENG", "Engineering Design Studio", 3.0, 1, "A project-based introduction to design methods and technical communication."),
+                        ("BUS101", "BUS", "Principles of Management", 3.0, 1, "Organisations, leadership, planning, and responsible management."),
+                        ("BUS201", "BUS", "Financial Accounting", 3.0, 2, "Financial statements, accounting cycles, and interpretation of business data."),
+                        ("HUM101", "HUM", "Academic Writing and Research", 2.0, 1, "Evidence-based writing, source evaluation, and research communication."),
+                    ],
+                )
+
+                # Seed sample faculty assignments and timetable if available
+                cursor.execute("SELECT id FROM faculty WHERE id='FT10000'")
+                if cursor.fetchone():
+                    cursor.executemany(
+                        "INSERT IGNORE INTO faculty_courses (faculty_id, course_code, academic_year, semester) VALUES (%s,%s,%s,%s)",
+                        [
+                            ("FT10000", "CSE101", "2026-27", 1),
+                            ("FT10000", "HUM101", "2026-27", 1),
+                            ("FT10001", "MAT101", "2026-27", 1),
+                            ("FT10001", "CSE102", "2026-27", 1),
+                            ("FT10007", "CSE301", "2026-27", 1),
+                            ("FT10007", "CSE302", "2026-27", 1),
+                            ("FT10003", "BUS101", "2026-27", 1),
+                        ],
+                    )
+                    cursor.executemany(
+                        "INSERT IGNORE INTO course_schedule (faculty_id, course_code, academic_year, semester, weekday, starts_at, ends_at, room) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                        [
+                            ("FT10000", "CSE101", "2026-27", 1, 0, "09:00:00", "10:30:00", "Turing Hall 101"),
+                            ("FT10001", "MAT101", "2026-27", 1, 0, "11:00:00", "12:30:00", "Ramanujan 204"),
+                            ("FT10000", "HUM101", "2026-27", 1, 1, "10:00:00", "11:30:00", "Aristotle 102"),
+                            ("FT10000", "CSE101", "2026-27", 1, 2, "09:00:00", "10:30:00", "Lab Computing 3"),
+                            ("FT10001", "CSE102", "2026-27", 1, 3, "14:00:00", "15:30:00", "Lovelace 105"),
+                            ("FT10001", "MAT101", "2026-27", 1, 4, "10:00:00", "11:30:00", "Ramanujan 204"),
+                        ],
+                    )
+
+                # Seed sample student enrollments, grades, and course attendance
+                cursor.execute("SELECT id FROM student WHERE id='ST10000'")
+                if cursor.fetchone():
+                    cursor.executemany(
+                        "INSERT IGNORE INTO course_enrollments (student_id, course_code, academic_year, semester, status) VALUES (%s,%s,%s,%s,%s)",
+                        [
+                            ("ST10000", "CSE101", "2026-27", 1, "approved"),
+                            ("ST10000", "MAT101", "2026-27", 1, "approved"),
+                            ("ST10000", "HUM101", "2026-27", 1, "approved"),
+                            ("ST10001", "CSE101", "2026-27", 1, "approved"),
+                            ("ST10001", "MAT101", "2026-27", 1, "approved"),
+                            ("ST10002", "CSE101", "2026-27", 1, "pending"),
+                            ("ST10003", "MAT101", "2026-27", 1, "pending"),
+                        ],
+                    )
+                    cursor.execute(
+                        "SELECT enrollment_id, student_id, course_code FROM course_enrollments WHERE status='approved'"
+                    )
+                    approved_rows = cursor.fetchall()
+                    grade_data = {
+                        ("ST10000", "CSE101"): (88.5, 100.0, "A", "Strong problem solving and structured coding skills.", "FT10000"),
+                        ("ST10000", "MAT101"): (93.0, 100.0, "A", "Outstanding analytical and mathematical reasoning.", "FT10001"),
+                        ("ST10000", "HUM101"): (85.0, 100.0, "B", "Clear academic writing and thoughtful research contributions.", "FT10000"),
+                        ("ST10001", "CSE101"): (91.0, 100.0, "A", "Consistently high scores in laboratory programming projects.", "FT10000"),
+                        ("ST10001", "MAT101"): (86.0, 100.0, "B", "Solid comprehension of linear algebra proofs.", "FT10001"),
+                    }
+                    for enr_id, sid, code in approved_rows:
+                        if (sid, code) in grade_data:
+                            m, mm, lg, fb, ub = grade_data[(sid, code)]
+                            cursor.execute(
+                                "INSERT IGNORE INTO course_grades (enrollment_id, marks, maximum_marks, letter_grade, feedback, updated_by) "
+                                "VALUES (%s,%s,%s,%s,%s,%s)",
+                                (enr_id, m, mm, lg, fb, ub),
+                            )
+
+                    for course, sids, dates in [
+                        ("CSE101", ["ST10000", "ST10001"], ["2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26"]),
+                        ("MAT101", ["ST10000", "ST10001"], ["2026-10-06", "2026-10-13", "2026-10-20"]),
+                        ("HUM101", ["ST10000"], ["2026-10-07", "2026-10-14", "2026-10-21"]),
+                    ]:
+                        for d in dates:
+                            for sid in sids:
+                                cursor.execute(
+                                    "INSERT IGNORE INTO course_attendance (course_code, student_id, academic_year, semester, attendance_date, attended, marked_by) "
+                                    "VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                                    (course, sid, "2026-27", 1, d, "Y", "FT10000"),
+                                )
+
+                # Seed sample university announcements
+                cursor.execute("SELECT COUNT(*) FROM announcements")
+                if cursor.fetchone()[0] == 0:
+                    cursor.executemany(
+                        "INSERT INTO announcements (title, body, audience, created_by) VALUES (%s,%s,%s,%s)",
+                        [
+                            (
+                                "Welcome to Autumn Semester 2026–27 Academic Session",
+                                "The Office of Academic Affairs welcomes all students and faculty members to the Autumn 2026–27 session. Course enrolment confirmation, semester schedules, and academic guidelines are now available in your respective portals.",
+                                "all",
+                                "SA100",
+                            ),
+                            (
+                                "Mid-Term Continuous Assessment Schedule Published",
+                                "Continuous internal evaluations and mid-term assessments for undergraduate and graduate courses will begin from November 16, 2026. Hall tickets and test seat allocations will be issued online.",
+                                "student",
+                                "SA100",
+                            ),
+                            (
+                                "Faculty Senate: Submission of Internal Grades & Course Plans",
+                                "All department faculty are requested to update continuous assessment marks and attendance records in the gradebook portal by the end of each academic cycle.",
+                                "faculty",
+                                "SA100",
+                            ),
+                            (
+                                "Annual University Innovation & Research Symposium 2026",
+                                "Submissions are invited for the upcoming University Innovation Symposium. Students and faculty can register papers and projects through department research coordinators.",
+                                "all",
+                                "SA100",
+                            ),
+                        ],
+                    )
+
+                # Ensure an admin account exists
+                cursor.execute("SELECT COUNT(*) FROM login_details WHERE typeofuser IN ('admin', 'superadmin')")
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute(
+                        "INSERT IGNORE INTO login_details (id, uname, password, typeofuser) VALUES (%s, %s, SHA2(%s, 256), %s)",
+                        ("SA100", "superadmin", "SuperAdmin@2026", "superadmin"),
+                    )
+                    cursor.execute(
+                        "INSERT IGNORE INTO admin (id, name, address, phoneno, age, sex) VALUES (%s,%s,%s,%s,%s,%s)",
+                        ("AD1000", "Academic Registrar Office", "Central Administration Building, Campus", 9876509999, 42, "Other"),
+                    )
+                    cursor.execute(
+                        "INSERT IGNORE INTO login_details (id, uname, password, typeofuser) VALUES (%s, %s, SHA2(%s, 256), %s)",
+                        ("AD1000", "admin.office", "Admin@Office2026", "admin"),
+                    )
+
                 connection.commit()
                 cursor.close()
                 _schema_ready = True
@@ -170,7 +419,7 @@ RECORD_FIELDS = {
     "students": [
         ("first_name", "First name", "text", True), ("middle_name", "Middle name", "text", False),
         ("last_name", "Last name", "text", True), ("roll_no", "Roll number", "number", True),
-        ("division", "Division (A-D)", "text", True), ("std", "Class (1-10)", "number", True),
+        ("division", "Section (A-D)", "text", True), ("std", "Year of study (1-10)", "number", True),
         ("dob", "Date of birth", "date", True), ("doa", "Date of admission", "date", True),
         ("sex", "Gender", "text", True), ("bloodgroup", "Blood group", "text", False),
         ("phoneno", "Phone number", "number", True), ("address", "Address", "textarea", True),
@@ -199,6 +448,8 @@ def create_record(record_type, values, username, password):
         raise ValueError("Username and password are required for a new account.")
     if len(password) < 8:
         raise ValueError("Use a password with at least 8 characters.")
+    if "middle_name" in values and values["middle_name"] is None:
+        values["middle_name"] = ""
     connection = db_connection()
     try:
         cursor = connection.cursor()
@@ -215,7 +466,7 @@ def create_record(record_type, values, username, password):
             division = (values["division"] or "").upper()
             standard = values["std"]
             if division not in {"A", "B", "C", "D"} or standard not in range(1, 11):
-                raise ValueError("Choose a class from 1–10 and division A–D.")
+                raise ValueError("Choose a year of study from 1–10 and a section from A–D.")
             cursor.execute("SELECT year_ FROM store_fees WHERE year_=%s", (values["doa"][:4],))
             if not cursor.fetchone():
                 raise ValueError("Add a fee plan for the admission year before adding this student.")
@@ -247,7 +498,9 @@ def update_record(record_type, user_id, values, username, password):
     if "division" in values:
         values["division"] = (values["division"] or "").upper()
         if values["division"] not in {"A", "B", "C", "D"} or values["std"] not in range(1, 11):
-            raise ValueError("Choose a class from 1–10 and division A–D.")
+            raise ValueError("Choose a year of study from 1–10 and a section from A–D.")
+    if "middle_name" in values and values["middle_name"] is None:
+        values["middle_name"] = ""
     if not username:
         raise ValueError("Please enter a username.")
     if password and len(password) < 8:
@@ -324,6 +577,22 @@ def roles_required(*roles):
     return decorator
 
 
+def academic_period(today=None):
+    """Return the current June-to-May academic year and its odd/even semester."""
+    today = today or date.today()
+    start_year = today.year if today.month >= 6 else today.year - 1
+    academic_year = f"{start_year}-{(start_year + 1) % 100:02d}"
+    semester = 1 if 6 <= today.month <= 11 else 2
+    return academic_year, semester
+
+
+def clean_academic_code(value, field_name, max_length):
+    value = value.strip().upper()
+    if not value or len(value) > max_length or not value.replace("-", "").isalnum():
+        raise ValueError(f"Enter a valid {field_name} using letters, numbers, or hyphens.")
+    return value
+
+
 @app.get("/")
 def index():
     return redirect(url_for("dashboard" if current_user() else "login"))
@@ -365,14 +634,24 @@ def logout():
 def dashboard():
     user = current_user()
     role = user["typeofuser"]
+    academic_year, semester = academic_period()
     if role == "student":
         profile = query(
-            "SELECT id, first_name, middle_name, last_name, std, division, roll_no "
+            "SELECT id, first_name, middle_name, last_name, std, division, roll_no, dob, doa, "
+            "bloodgroup, sex, phoneno, address, father_name, mother_name, father_occ, mother_occ "
             "FROM student WHERE id=%s", (user["id"],), one=True,
         )
         if not profile:
             abort(404)
-        return render_template("student_dashboard.html", profile=profile)
+        course_summary = query(
+            "SELECT COUNT(*) AS total, SUM(status='pending') AS pending "
+            "FROM course_enrollments WHERE student_id=%s AND academic_year=%s AND semester=%s",
+            (user["id"], academic_year, semester), one=True,
+        )
+        announcements = announcements_for_role(role, limit=3)
+        return render_template("student_dashboard.html", profile=profile,
+                               course_summary=course_summary, announcements=announcements,
+                               academic_year=academic_year, semester=semester)
     if role == "faculty":
         profile = query(
             "SELECT id, first_name, middle_name, last_name, sub, email "
@@ -384,15 +663,547 @@ def dashboard():
             "SELECT std, divison FROM div_details WHERE faculty_id=%s",
             (user["id"],), one=True,
         )
-        return render_template("faculty_dashboard.html", profile=profile, assignment=class_assignment)
+        course_summary = query(
+            "SELECT COUNT(*) AS total FROM faculty_courses "
+            "WHERE faculty_id=%s AND academic_year=%s AND semester=%s",
+            (user["id"], academic_year, semester), one=True,
+        )
+        announcements = announcements_for_role(role, limit=3)
+        return render_template("faculty_dashboard.html", profile=profile, assignment=class_assignment,
+                               course_summary=course_summary, announcements=announcements,
+                               academic_year=academic_year, semester=semester)
     if role in ("admin", "superadmin"):
-        totals = {
-            "students": query("SELECT COUNT(*) AS total FROM student", one=True)["total"],
-            "faculty": query("SELECT COUNT(*) AS total FROM faculty", one=True)["total"],
-            "admins": query("SELECT COUNT(*) AS total FROM admin", one=True)["total"],
-        }
-        return render_template("admin_dashboard.html", totals=totals)
+        totals = query(
+            "SELECT (SELECT COUNT(*) FROM student) AS students, "
+            "(SELECT COUNT(*) FROM faculty) AS faculty, "
+            "(SELECT COUNT(*) FROM admin) AS admins, "
+            "(SELECT COUNT(*) FROM courses WHERE active=1) AS courses, "
+            "(SELECT COUNT(*) FROM course_enrollments WHERE status='pending') AS pending_enrollments",
+            one=True,
+        )
+        announcements = announcements_for_role(role, limit=3)
+        return render_template("admin_dashboard.html", totals=totals, announcements=announcements,
+                               academic_year=academic_year, semester=semester)
     abort(403)
+
+
+def announcements_for_role(role, limit=20):
+    if role in {"admin", "superadmin"}:
+        return query(
+            "SELECT a.announcement_id,a.title,a.body,a.audience,a.created_at,l.uname AS author "
+            "FROM announcements a LEFT JOIN login_details l ON l.id=a.created_by "
+            "WHERE a.published=1 ORDER BY a.created_at DESC LIMIT %s", (limit,),
+        )
+    audience = "student" if role == "student" else "faculty" if role == "faculty" else "staff"
+    return query(
+        "SELECT a.announcement_id, a.title, a.body, a.audience, a.created_at, "
+        "l.uname AS author FROM announcements a "
+        "LEFT JOIN login_details l ON l.id=a.created_by "
+        "WHERE a.published=1 AND a.audience IN ('all',%s) "
+        "ORDER BY a.created_at DESC LIMIT %s", (audience, limit),
+    )
+
+
+@app.route("/academics", methods=["GET", "POST"])
+@roles_required("admin", "superadmin")
+def academics():
+    academic_year, semester = academic_period()
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        try:
+            if action == "department":
+                department_id = clean_academic_code(request.form.get("department_id", ""), "department code", 12)
+                name = request.form.get("name", "").strip()
+                description = request.form.get("description", "").strip()
+                if not name or len(name) > 100:
+                    raise ValueError("Enter a department name of 1 to 100 characters.")
+                execute("INSERT INTO departments (department_id,name,description) VALUES (%s,%s,%s)",
+                        (department_id, name, description or None))
+                flash("Department added.", "success")
+            elif action == "toggle_department":
+                execute("UPDATE departments SET active=NOT active WHERE department_id=%s",
+                        (request.form.get("department_id", ""),))
+                flash("Department availability updated.", "success")
+            elif action == "course":
+                course_code = clean_academic_code(request.form.get("course_code", ""), "course code", 20)
+                department_id = request.form.get("department_id", "").strip().upper()
+                title = request.form.get("title", "").strip()
+                description = request.form.get("description", "").strip()
+                credits = float(request.form.get("credits", "3"))
+                course_semester = int(request.form.get("semester", "1"))
+                if not title or len(title) > 120 or not 0 < credits <= 99 or not 1 <= course_semester <= 12:
+                    raise ValueError("Enter a course title, positive credit value, and semester from 1 to 12.")
+                execute(
+                    "INSERT INTO courses (course_code,department_id,title,credits,semester,description) "
+                    "VALUES (%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE department_id=VALUES(department_id), "
+                    "title=VALUES(title),credits=VALUES(credits),semester=VALUES(semester),description=VALUES(description)",
+                    (course_code, department_id, title, credits, course_semester, description or None),
+                )
+                flash(f"Course {course_code} saved.", "success")
+            elif action == "assign":
+                faculty_id = request.form.get("faculty_id", "").strip()
+                course_code = request.form.get("course_code", "").strip().upper()
+                year = request.form.get("academic_year", academic_year).strip()
+                term = int(request.form.get("semester", semester))
+                if len(year) != 7 or not year[:4].isdigit() or year[4] != "-" or not year[5:].isdigit() or not 1 <= term <= 12:
+                    raise ValueError("Enter a valid academic year and semester.")
+                execute(
+                    "INSERT IGNORE INTO faculty_courses (faculty_id,course_code,academic_year,semester) VALUES (%s,%s,%s,%s)",
+                    (faculty_id, course_code, year, term),
+                )
+                flash("Faculty course assignment saved.", "success")
+            elif action == "unassign":
+                execute(
+                    "DELETE FROM faculty_courses WHERE faculty_id=%s AND course_code=%s AND academic_year=%s AND semester=%s",
+                    (request.form.get("faculty_id", ""), request.form.get("course_code", ""),
+                     request.form.get("academic_year", ""), int(request.form.get("semester", "1"))),
+                )
+                flash("Faculty assignment removed. Its timetable entries were removed as well.", "success")
+            elif action == "toggle_course":
+                execute("UPDATE courses SET active=NOT active WHERE course_code=%s",
+                        (request.form.get("course_code", ""),))
+                flash("Course availability updated.", "success")
+            elif action == "schedule":
+                faculty_id, course_code, year, term = request.form.get("assignment", "").split("|", 3)
+                weekday = int(request.form.get("weekday", "0"))
+                starts_at = request.form.get("starts_at", "")
+                ends_at = request.form.get("ends_at", "")
+                room = request.form.get("room", "").strip()
+                if not 0 <= weekday <= 6 or not room or len(room) > 32 or not starts_at or not ends_at or starts_at >= ends_at:
+                    raise ValueError("Enter a valid day, time range, and room.")
+                conflict = query(
+                    "SELECT schedule_id FROM course_schedule WHERE academic_year=%s AND semester=%s AND weekday=%s "
+                    "AND starts_at < %s AND ends_at > %s AND (faculty_id=%s OR room=%s) LIMIT 1",
+                    (year, term, weekday, ends_at, starts_at, faculty_id, room), one=True,
+                )
+                if conflict:
+                    raise ValueError("That room or faculty member already has a class during this time.")
+                execute(
+                    "INSERT INTO course_schedule (faculty_id,course_code,academic_year,semester,weekday,starts_at,ends_at,room) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (faculty_id, course_code, year, term, weekday, starts_at, ends_at, room),
+                )
+                flash("Timetable entry added.", "success")
+            elif action == "remove_schedule":
+                execute("DELETE FROM course_schedule WHERE schedule_id=%s",
+                        (request.form.get("schedule_id", ""),))
+                flash("Timetable entry removed.", "success")
+            else:
+                raise ValueError("Choose an academic action and try again.")
+        except (ValueError, TypeError) as exc:
+            flash(str(exc) or "Check the values and try again.", "error")
+        except mysql.connector.Error:
+            app.logger.exception("Could not update academic records")
+            flash("The academic record could not be saved. Check that the department, course, and faculty exist.", "error")
+        return redirect(url_for("academics"))
+
+    departments = query("SELECT department_id,name,description,active FROM departments ORDER BY name")
+    courses = query(
+        "SELECT c.course_code,c.title,c.credits,c.semester,c.description,c.active,d.name AS department "
+        "FROM courses c JOIN departments d ON d.department_id=c.department_id ORDER BY d.name,c.course_code"
+    )
+    faculty = query("SELECT id,first_name,middle_name,last_name,sub FROM faculty ORDER BY first_name,last_name")
+    assignments = query(
+        "SELECT fc.faculty_id,fc.course_code,fc.academic_year,fc.semester,c.title,c.credits, "
+        "CONCAT_WS(' ',f.first_name,f.middle_name,f.last_name) AS faculty_name, "
+        "(SELECT COUNT(*) FROM course_enrollments ce WHERE ce.course_code=fc.course_code "
+        "AND ce.academic_year=fc.academic_year AND ce.semester=fc.semester AND ce.status='approved') AS enrolled "
+        "FROM faculty_courses fc JOIN courses c ON c.course_code=fc.course_code "
+        "JOIN faculty f ON f.id=fc.faculty_id "
+        "WHERE fc.academic_year=%s AND fc.semester=%s ORDER BY c.course_code,f.first_name",
+        (academic_year, semester),
+    )
+    assignment_options = [
+        {**row, "value": f"{row['faculty_id']}|{row['course_code']}|{row['academic_year']}|{row['semester']}"}
+        for row in assignments
+    ]
+    schedules = query(
+        "SELECT s.schedule_id,s.weekday,s.starts_at,s.ends_at,s.room,c.course_code,c.title, "
+        "CONCAT_WS(' ',f.first_name,f.last_name) AS faculty_name "
+        "FROM course_schedule s JOIN courses c ON c.course_code=s.course_code "
+        "JOIN faculty f ON f.id=s.faculty_id WHERE s.academic_year=%s AND s.semester=%s "
+        "ORDER BY s.weekday,s.starts_at", (academic_year, semester),
+    )
+    return render_template("academics.html", departments=departments, courses=courses, faculty=faculty,
+                           assignments=assignments, assignment_options=assignment_options,
+                           schedules=schedules, academic_year=academic_year, semester=semester)
+
+
+@app.route("/student/courses", methods=["GET", "POST"])
+@roles_required("student")
+def student_courses():
+    user = current_user()
+    academic_year, semester = academic_period()
+    if request.method == "POST":
+        course_code = request.form.get("course_code", "").strip().upper()
+        available = query(
+            "SELECT c.course_code FROM courses c JOIN faculty_courses fc ON fc.course_code=c.course_code "
+            "WHERE c.course_code=%s AND c.active=1 AND fc.academic_year=%s AND fc.semester=%s LIMIT 1",
+            (course_code, academic_year, semester), one=True,
+        )
+        if not available:
+            flash("This course is not currently open for registration.", "error")
+        else:
+            existing = query(
+                "SELECT enrollment_id,status FROM course_enrollments WHERE student_id=%s AND course_code=%s "
+                "AND academic_year=%s AND semester=%s", (user["id"], course_code, academic_year, semester), one=True,
+            )
+            if existing and existing["status"] != "rejected":
+                flash("You already have a registration request for this course.", "error")
+            elif existing:
+                execute("UPDATE course_enrollments SET status='pending',requested_at=CURRENT_TIMESTAMP,reviewed_at=NULL WHERE enrollment_id=%s",
+                        (existing["enrollment_id"],))
+                flash("Your registration request has been sent for review.", "success")
+            else:
+                execute(
+                    "INSERT INTO course_enrollments (student_id,course_code,academic_year,semester,status) VALUES (%s,%s,%s,%s,'pending')",
+                    (user["id"], course_code, academic_year, semester),
+                )
+                flash("Your registration request has been sent for review.", "success")
+        return redirect(url_for("student_courses"))
+    courses = query(
+        "SELECT c.course_code,c.title,c.credits,c.semester,c.description,d.name AS department, "
+        "GROUP_CONCAT(DISTINCT CONCAT_WS(' ',f.first_name,f.middle_name,f.last_name) ORDER BY f.last_name SEPARATOR ', ') AS faculty_names, "
+        "ce.status AS enrollment_status "
+        "FROM courses c JOIN departments d ON d.department_id=c.department_id "
+        "JOIN faculty_courses fc ON fc.course_code=c.course_code "
+        "JOIN faculty f ON f.id=fc.faculty_id "
+        "LEFT JOIN course_enrollments ce ON ce.course_code=c.course_code AND ce.student_id=%s "
+        "AND ce.academic_year=fc.academic_year AND ce.semester=fc.semester "
+        "WHERE c.active=1 AND fc.academic_year=%s AND fc.semester=%s "
+        "GROUP BY c.course_code,c.title,c.credits,c.semester,c.description,d.name,ce.status ORDER BY d.name,c.course_code",
+        (user["id"], academic_year, semester),
+    )
+    my_courses = query(
+        "SELECT c.course_code,c.title,c.credits,ce.status,ce.enrollment_id, "
+        "GROUP_CONCAT(DISTINCT CONCAT_WS(' ',f.first_name,f.last_name) ORDER BY f.last_name SEPARATOR ', ') AS faculty_names, "
+        "cg.marks,cg.maximum_marks,cg.letter_grade "
+        "FROM course_enrollments ce JOIN courses c ON c.course_code=ce.course_code "
+        "LEFT JOIN faculty_courses fc ON fc.course_code=ce.course_code AND fc.academic_year=ce.academic_year AND fc.semester=ce.semester "
+        "LEFT JOIN faculty f ON f.id=fc.faculty_id LEFT JOIN course_grades cg ON cg.enrollment_id=ce.enrollment_id "
+        "WHERE ce.student_id=%s AND ce.academic_year=%s AND ce.semester=%s "
+        "GROUP BY c.course_code,c.title,c.credits,ce.status,ce.enrollment_id,cg.marks,cg.maximum_marks,cg.letter_grade "
+        "ORDER BY c.course_code", (user["id"], academic_year, semester),
+    )
+    return render_template("student_courses.html", courses=courses, my_courses=my_courses,
+                           academic_year=academic_year, semester=semester)
+
+
+@app.get("/faculty/courses")
+@roles_required("faculty")
+def faculty_courses():
+    user = current_user()
+    academic_year, semester = academic_period()
+    courses = query(
+        "SELECT c.course_code,c.title,c.credits,c.semester,c.description,fc.academic_year,fc.semester AS term, "
+        "(SELECT COUNT(*) FROM course_enrollments ce WHERE ce.course_code=c.course_code "
+        "AND ce.academic_year=fc.academic_year AND ce.semester=fc.semester AND ce.status='approved') AS enrolled "
+        "FROM faculty_courses fc JOIN courses c ON c.course_code=fc.course_code "
+        "WHERE fc.faculty_id=%s AND fc.academic_year=%s AND fc.semester=%s ORDER BY c.course_code",
+        (user["id"], academic_year, semester),
+    )
+    return render_template("faculty_courses.html", courses=courses, academic_year=academic_year, semester=semester)
+
+
+@app.route("/enrolments", methods=["GET", "POST"])
+@roles_required("admin", "superadmin")
+def enrolments():
+    if request.method == "POST":
+        enrollment_id = request.form.get("enrollment_id", "")
+        status = request.form.get("status", "")
+        if status not in {"approved", "rejected", "pending"}:
+            flash("Choose a valid registration status.", "error")
+        else:
+            enrollment = query(
+                "SELECT student_id,course_code,academic_year,semester FROM course_enrollments WHERE enrollment_id=%s",
+                (enrollment_id,), one=True,
+            )
+            if not enrollment:
+                flash("That registration could not be found.", "error")
+            else:
+                conflict = None
+                if status == "approved":
+                    conflict = query(
+                        "SELECT target.schedule_id FROM course_schedule target "
+                        "JOIN course_schedule other ON other.academic_year=target.academic_year "
+                        "AND other.semester=target.semester AND other.weekday=target.weekday "
+                        "AND other.course_code<>target.course_code AND other.starts_at<target.ends_at "
+                        "AND other.ends_at>target.starts_at "
+                        "JOIN course_enrollments enrolled ON enrolled.course_code=other.course_code "
+                        "AND enrolled.student_id=%s AND enrolled.academic_year=other.academic_year "
+                        "AND enrolled.semester=other.semester AND enrolled.status='approved' "
+                        "WHERE target.course_code=%s AND target.academic_year=%s AND target.semester=%s LIMIT 1",
+                        (enrollment["student_id"], enrollment["course_code"],
+                         enrollment["academic_year"], enrollment["semester"]), one=True,
+                    )
+                if conflict:
+                    flash("This student already has an approved course scheduled at the same time.", "error")
+                else:
+                    execute("UPDATE course_enrollments SET status=%s,reviewed_at=CURRENT_TIMESTAMP WHERE enrollment_id=%s",
+                            (status, enrollment_id))
+                    flash("Registration status updated.", "success")
+        return redirect(url_for("enrolments", status=request.args.get("status", "pending")))
+    selected_status = request.args.get("status", "pending")
+    if selected_status not in {"pending", "approved", "rejected", "all"}:
+        selected_status = "pending"
+    filter_sql = "" if selected_status == "all" else "WHERE ce.status=%s"
+    params = () if selected_status == "all" else (selected_status,)
+    rows = query(
+        "SELECT ce.enrollment_id,ce.student_id,ce.course_code,ce.academic_year,ce.semester,ce.status,ce.requested_at, "
+        "CONCAT_WS(' ',s.first_name,s.middle_name,s.last_name) AS student_name, "
+        "c.title,c.credits,CONCAT_WS(' ',f.first_name,f.last_name) AS faculty_name "
+        "FROM course_enrollments ce JOIN student s ON s.id=ce.student_id JOIN courses c ON c.course_code=ce.course_code "
+        "LEFT JOIN faculty_courses fc ON fc.course_code=ce.course_code AND fc.academic_year=ce.academic_year AND fc.semester=ce.semester "
+        "LEFT JOIN faculty f ON f.id=fc.faculty_id " + filter_sql +
+        " ORDER BY FIELD(ce.status,'pending','approved','rejected'),ce.requested_at DESC",
+        params,
+    )
+    return render_template("enrolments.html", rows=rows, selected_status=selected_status)
+
+
+def faculty_course_assignment(faculty_id, course_code):
+    academic_year, semester = academic_period()
+    assignment = query(
+        "SELECT fc.faculty_id,fc.course_code,fc.academic_year,fc.semester,c.title "
+        "FROM faculty_courses fc JOIN courses c ON c.course_code=fc.course_code "
+        "WHERE fc.faculty_id=%s AND fc.course_code=%s AND fc.academic_year=%s AND fc.semester=%s",
+        (faculty_id, course_code, academic_year, semester), one=True,
+    )
+    if not assignment:
+        abort(403)
+    return assignment
+
+
+def letter_grade(marks, maximum):
+    percentage = marks / maximum * 100
+    if percentage >= 90:
+        return "A"
+    if percentage >= 80:
+        return "B"
+    if percentage >= 70:
+        return "C"
+    if percentage >= 60:
+        return "D"
+    return "F"
+
+
+@app.route("/faculty/courses/<course_code>/attendance", methods=["GET", "POST"])
+@roles_required("faculty")
+def faculty_course_attendance(course_code):
+    assignment = faculty_course_assignment(current_user()["id"], course_code.upper())
+    selected_date = request.values.get("date", date.today().isoformat())
+    try:
+        date.fromisoformat(selected_date)
+    except ValueError:
+        abort(400, "Invalid attendance date.")
+    if request.method == "POST":
+        roster = query(
+            "SELECT student_id FROM course_enrollments WHERE course_code=%s AND academic_year=%s "
+            "AND semester=%s AND status='approved'",
+            (assignment["course_code"], assignment["academic_year"], assignment["semester"]),
+        )
+        valid_ids = {row["student_id"] for row in roster}
+        connection = db_connection()
+        try:
+            cursor = connection.cursor()
+            for key, attended in request.form.items():
+                if not key.startswith("student_") or attended not in {"Y", "N"}:
+                    continue
+                student_id = key.removeprefix("student_")
+                if student_id not in valid_ids:
+                    continue
+                cursor.execute(
+                    "INSERT INTO course_attendance (course_code,student_id,academic_year,semester,attendance_date,attended,marked_by) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE attended=VALUES(attended),marked_by=VALUES(marked_by)",
+                    (assignment["course_code"], student_id, assignment["academic_year"], assignment["semester"],
+                     selected_date, attended, current_user()["id"]),
+                )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        flash("Course attendance saved.", "success")
+        return redirect(url_for("faculty_course_attendance", course_code=course_code, date=selected_date))
+    students = query(
+        "SELECT ce.student_id,CONCAT_WS(' ',s.first_name,s.middle_name,s.last_name) AS name,s.roll_no,s.division "
+        "FROM course_enrollments ce JOIN student s ON s.id=ce.student_id "
+        "WHERE ce.course_code=%s AND ce.academic_year=%s AND ce.semester=%s AND ce.status='approved' "
+        "ORDER BY s.roll_no,s.last_name,s.first_name",
+        (assignment["course_code"], assignment["academic_year"], assignment["semester"]),
+    )
+    attendance_rows = query(
+        "SELECT student_id,attended FROM course_attendance WHERE course_code=%s AND academic_year=%s "
+        "AND semester=%s AND attendance_date=%s",
+        (assignment["course_code"], assignment["academic_year"], assignment["semester"], selected_date),
+    )
+    attendance = {row["student_id"]: row["attended"] for row in attendance_rows}
+    return render_template("faculty_course_attendance.html", assignment=assignment,
+                           students=students, attendance=attendance, selected_date=selected_date)
+
+
+@app.route("/faculty/courses/<course_code>/grades", methods=["GET", "POST"])
+@roles_required("faculty")
+def faculty_course_grades(course_code):
+    assignment = faculty_course_assignment(current_user()["id"], course_code.upper())
+    roster = query(
+        "SELECT ce.enrollment_id,ce.student_id,CONCAT_WS(' ',s.first_name,s.middle_name,s.last_name) AS name,s.roll_no "
+        "FROM course_enrollments ce JOIN student s ON s.id=ce.student_id "
+        "WHERE ce.course_code=%s AND ce.academic_year=%s AND ce.semester=%s AND ce.status='approved' "
+        "ORDER BY s.roll_no,s.last_name,s.first_name",
+        (assignment["course_code"], assignment["academic_year"], assignment["semester"]),
+    )
+    if request.method == "POST":
+        connection = db_connection()
+        try:
+            cursor = connection.cursor()
+            for student in roster:
+                enrollment_id = str(student["enrollment_id"])
+                raw_marks = request.form.get(f"marks_{enrollment_id}", "").strip()
+                raw_maximum = request.form.get(f"maximum_{enrollment_id}", "100").strip()
+                feedback = request.form.get(f"feedback_{enrollment_id}", "").strip()[:1000]
+                if not raw_marks:
+                    continue
+                try:
+                    marks, maximum = float(raw_marks), float(raw_maximum)
+                except ValueError as exc:
+                    raise ValueError("Enter numeric marks and maximum marks for each student.") from exc
+                if maximum <= 0 or marks < 0 or marks > maximum or maximum > 9999:
+                    raise ValueError("Marks must be between zero and the maximum marks.")
+                cursor.execute(
+                    "INSERT INTO course_grades (enrollment_id,marks,maximum_marks,letter_grade,feedback,updated_by) "
+                    "VALUES (%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE marks=VALUES(marks), "
+                    "maximum_marks=VALUES(maximum_marks),letter_grade=VALUES(letter_grade),feedback=VALUES(feedback),updated_by=VALUES(updated_by)",
+                    (student["enrollment_id"], marks, maximum, letter_grade(marks, maximum), feedback or None, current_user()["id"]),
+                )
+            connection.commit()
+            flash("Gradebook saved.", "success")
+        except ValueError as exc:
+            connection.rollback()
+            flash(str(exc), "error")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return redirect(url_for("faculty_course_grades", course_code=course_code))
+    grades = query(
+        "SELECT cg.enrollment_id,cg.marks,cg.maximum_marks,cg.letter_grade,cg.feedback "
+        "FROM course_grades cg JOIN course_enrollments ce ON ce.enrollment_id=cg.enrollment_id "
+        "WHERE ce.course_code=%s AND ce.academic_year=%s AND ce.semester=%s",
+        (assignment["course_code"], assignment["academic_year"], assignment["semester"]),
+    )
+    grade_by_enrollment = {row["enrollment_id"]: row for row in grades}
+    return render_template("faculty_course_grades.html", assignment=assignment, roster=roster,
+                           grade_by_enrollment=grade_by_enrollment)
+
+
+@app.get("/student/transcript")
+@roles_required("student")
+def student_transcript():
+    rows = query(
+        "SELECT ce.academic_year,ce.semester,c.course_code,c.title,c.credits,cg.marks,cg.maximum_marks, "
+        "cg.letter_grade,cg.feedback,(SELECT COUNT(*) FROM course_attendance ca WHERE ca.student_id=ce.student_id "
+        "AND ca.course_code=ce.course_code AND ca.academic_year=ce.academic_year AND ca.semester=ce.semester AND ca.attended='Y') AS attended, "
+        "(SELECT COUNT(*) FROM course_attendance ca WHERE ca.student_id=ce.student_id "
+        "AND ca.course_code=ce.course_code AND ca.academic_year=ce.academic_year AND ca.semester=ce.semester) AS meetings "
+        "FROM course_enrollments ce JOIN courses c ON c.course_code=ce.course_code "
+        "LEFT JOIN course_grades cg ON cg.enrollment_id=ce.enrollment_id "
+        "WHERE ce.student_id=%s AND ce.status='approved' "
+        "ORDER BY ce.academic_year DESC,ce.semester DESC,c.course_code", (current_user()["id"],),
+    )
+    total_credits = sum(float(r["credits"]) for r in rows)
+    points = {"O": 10.0, "A": 9.0, "B": 8.0, "C": 7.0, "D": 6.0, "F": 0.0}
+    graded_credits = sum(float(r["credits"]) for r in rows if r.get("letter_grade") in points)
+    earned_credits = sum(float(r["credits"]) for r in rows if r.get("letter_grade") in points and points[r["letter_grade"]] > 0)
+    total_points = sum(float(r["credits"]) * points[r["letter_grade"]] for r in rows if r.get("letter_grade") in points)
+    cgpa = round(total_points / graded_credits, 2) if graded_credits > 0 else None
+    return render_template(
+        "student_transcript.html",
+        rows=rows,
+        total_credits=total_credits,
+        earned_credits=earned_credits,
+        cgpa=cgpa,
+    )
+
+
+@app.get("/schedule")
+@login_required
+def schedule():
+    user = current_user()
+    academic_year, semester = academic_period()
+    sql = (
+        "SELECT s.weekday,s.starts_at,s.ends_at,s.room,c.course_code,c.title,c.credits, "
+        "CONCAT_WS(' ',f.first_name,f.last_name) AS faculty_name "
+        "FROM course_schedule s JOIN courses c ON c.course_code=s.course_code "
+        "JOIN faculty f ON f.id=s.faculty_id WHERE s.academic_year=%s AND s.semester=%s"
+    )
+    params = [academic_year, semester]
+    if user["typeofuser"] == "student":
+        sql += " AND EXISTS (SELECT 1 FROM course_enrollments ce WHERE ce.student_id=%s AND ce.course_code=s.course_code AND ce.academic_year=s.academic_year AND ce.semester=s.semester AND ce.status='approved')"
+        params.append(user["id"])
+    elif user["typeofuser"] == "faculty":
+        sql += " AND s.faculty_id=%s"
+        params.append(user["id"])
+    rows = query(sql + " ORDER BY s.weekday,s.starts_at,c.course_code", tuple(params))
+    return render_template("schedule.html", rows=rows, academic_year=academic_year, semester=semester)
+
+
+@app.route("/announcements", methods=["GET", "POST"])
+@login_required
+def announcements():
+    role = current_user()["typeofuser"]
+    can_publish = role in {"admin", "superadmin"}
+    if request.method == "POST":
+        if not can_publish:
+            abort(403)
+        title = request.form.get("title", "").strip()
+        body = request.form.get("body", "").strip()
+        audience = request.form.get("audience", "all")
+        if not title or len(title) > 160 or not body or len(body) > 10000 or audience not in {"all", "student", "faculty", "staff"}:
+            flash("Enter a title, message, and valid audience.", "error")
+        else:
+            execute("INSERT INTO announcements (title,body,audience,created_by) VALUES (%s,%s,%s,%s)",
+                    (title, body, audience, current_user()["id"]))
+            flash("Notice published.", "success")
+        return redirect(url_for("announcements"))
+    rows = announcements_for_role(role, limit=100)
+    return render_template("announcements.html", rows=rows, can_publish=can_publish)
+
+
+@app.post("/announcements/<int:announcement_id>/delete")
+@roles_required("admin", "superadmin")
+def delete_announcement(announcement_id):
+    execute("DELETE FROM announcements WHERE announcement_id=%s", (announcement_id,))
+    flash("Notice removed.", "success")
+    return redirect(url_for("announcements"))
+
+
+@app.get("/reports")
+@roles_required("admin", "superadmin")
+def reports():
+    totals = query(
+        "SELECT (SELECT COUNT(*) FROM student) AS students,(SELECT COUNT(*) FROM faculty) AS faculty, "
+        "(SELECT COUNT(*) FROM departments WHERE active=1) AS departments,(SELECT COUNT(*) FROM courses WHERE active=1) AS courses, "
+        "(SELECT COUNT(*) FROM course_enrollments WHERE status='pending') AS pending, "
+        "(SELECT COUNT(*) FROM course_enrollments WHERE status='approved') AS active_enrollments, "
+        "(SELECT COUNT(*) FROM attendance WHERE attended='Y') AS school_attendance_days, "
+        "(SELECT COUNT(*) FROM course_attendance WHERE attended='Y') AS course_attendance", one=True,
+    )
+    enrollment_rows = query(
+        "SELECT c.course_code,c.title,fc.academic_year,fc.semester,SUM(ce.status='approved') AS enrolled, "
+        "SUM(ce.status='pending') AS pending FROM faculty_courses fc JOIN courses c ON c.course_code=fc.course_code "
+        "LEFT JOIN course_enrollments ce ON ce.course_code=fc.course_code AND ce.academic_year=fc.academic_year AND ce.semester=fc.semester "
+        "GROUP BY c.course_code,c.title,fc.academic_year,fc.semester "
+        "ORDER BY fc.academic_year DESC,fc.semester DESC,c.course_code LIMIT 100"
+    )
+    attendance_rows = query(
+        "SELECT attendance_date,COUNT(*) AS marked,SUM(attended='Y') AS present FROM course_attendance "
+        "GROUP BY attendance_date ORDER BY attendance_date DESC LIMIT 14"
+    )
+    return render_template("reports.html", totals=totals, enrollment_rows=enrollment_rows,
+                           attendance_rows=attendance_rows)
 
 
 @app.get("/student/attendance")
@@ -440,14 +1251,37 @@ def records(record_type):
         where = " WHERE " + " OR ".join(f"{column} LIKE %s" for column in searches[record_type])
         params = [f"%{search_text}%"] * len(searches[record_type])
     if record_type == "students":
-        rows = query(
-            "SELECT id, first_name, middle_name, last_name, std, division, roll_no "
-            "FROM student" + where + " ORDER BY std, division, roll_no", params
-        )
+        if role == "faculty":
+            assignment = query("SELECT std,divison FROM div_details WHERE faculty_id=%s", (current_user()["id"],), one=True)
+            access = [
+                "EXISTS (SELECT 1 FROM course_enrollments ce JOIN faculty_courses fc "
+                "ON fc.course_code=ce.course_code AND fc.academic_year=ce.academic_year AND fc.semester=ce.semester "
+                "WHERE ce.student_id=student.id AND ce.status='approved' AND fc.faculty_id=%s)"
+            ]
+            access_params = [current_user()["id"]]
+            if assignment:
+                access.append("(student.std=%s AND student.division=%s)")
+                access_params.extend([assignment["std"], assignment["divison"]])
+            student_where = " WHERE (" + " OR ".join(access) + ")"
+            student_params = access_params
+            if search_text:
+                student_where += " AND (" + " OR ".join(f"{column} LIKE %s" for column in searches[record_type]) + ")"
+                student_params += [f"%{search_text}%"] * len(searches[record_type])
+            rows = query(
+                "SELECT id, first_name, middle_name, last_name, std AS year_of_study, division AS section, "
+                "roll_no AS roll_number FROM student" +
+                student_where + " ORDER BY std, division, roll_no", student_params,
+            )
+        else:
+            rows = query(
+                "SELECT id, first_name, middle_name, last_name, std AS year_of_study, division AS section, "
+                "roll_no AS roll_number "
+                "FROM student" + where + " ORDER BY std, division, roll_no", params
+            )
         title = "Students"
     elif record_type == "faculty":
         rows = query(
-            "SELECT id, first_name, middle_name, last_name, sub AS subject, email "
+            "SELECT id, first_name, middle_name, last_name, sub AS academic_discipline, email "
             "FROM faculty" + where + " ORDER BY first_name, last_name", params
         )
         title = "Faculty"
@@ -638,16 +1472,16 @@ def faculty_assignment():
         try:
             standard = int(request.form.get("standard", ""))
         except ValueError:
-            abort(400, "Choose a valid class.")
+            abort(400, "Choose a valid year of study.")
         division = request.form.get("division", "")
         if standard not in range(1, 11) or division not in {"A", "B", "C", "D"}:
-            abort(400, "Choose a valid class and division.")
+            abort(400, "Choose a valid year of study and section.")
         existing = query("SELECT faculty_id FROM div_details WHERE faculty_id=%s", (faculty_id,), one=True)
         if existing:
             execute("UPDATE div_details SET std=%s, divison=%s WHERE faculty_id=%s", (standard, division, faculty_id))
         else:
             execute("INSERT INTO div_details (std, divison, faculty_id) VALUES (%s,%s,%s)", (standard, division, faculty_id))
-        flash("Your class teacher assignment was saved.", "success")
+        flash("Your year adviser assignment was saved.", "success")
         return redirect(url_for("dashboard"))
     assignment = query("SELECT std, divison FROM div_details WHERE faculty_id=%s", (faculty_id,), one=True)
     return render_template("faculty_assignment.html", assignment=assignment)
@@ -664,7 +1498,7 @@ def mark_attendance():
             (user["id"],), one=True,
         )
         if not assignment:
-            abort(403, "A class must be assigned to this faculty account first.")
+            abort(403, "A year adviser assignment is required for this attendance register.")
     selected_date = request.values.get("date", date.today().isoformat())
     try:
         date.fromisoformat(selected_date)

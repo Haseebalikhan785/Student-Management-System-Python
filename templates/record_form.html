@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
-{% block title %}{{ title }} · Student Management{% endblock %}
+{% block title %}{{ title }} · University Management{% endblock %}
 {% block content %}
-<p class="eyebrow">School records</p>
+<p class="eyebrow">University records</p>
 <div class="page-intro"><h1>{{ title }}</h1><p class="muted">{% if is_new %}Enter the profile details and create its sign-in account.{% else %}Update the profile and sign-in username. Leave the password blank to keep the current password.{% endif %}</p></div>
 <form method="post" class="panel form-panel">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <section aria-labelledby="personal-heading">
-    <h2 id="personal-heading">Personal information</h2>
+    <h2 id="personal-heading">Personal and university details</h2>
     <div class="form-grid">
       {% for name, label, kind, required in fields %}
         <label class="{% if kind == 'textarea' %}wide{% endif %}">{{ label }}{% if required %} <span class="required">*</span>{% endif %}
@@ -14,7 +14,7 @@
           {% if kind == 'textarea' %}
             <textarea name="{{ name }}" {% if required %}required{% endif %}>{{ value }}</textarea>
           {% elif name == 'division' %}
-            <select name="{{ name }}" required><option value="">Choose division</option>{% for option in ['A','B','C','D'] %}<option value="{{ option }}" {% if value|string|upper == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+            <select name="{{ name }}" required><option value="">Choose section</option>{% for option in ['A','B','C','D'] %}<option value="{{ option }}" {% if value|string|upper == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
           {% elif name == 'sex' %}
             <select name="{{ name }}" required><option value="">Choose</option>{% for option in ['Male','Female','Other'] %}<option value="{{ option }}" {% if value|string|lower == option|lower %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
           {% else %}

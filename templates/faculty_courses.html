@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}My courses · University Management{% endblock %}
+{% block content %}
+<section class="page-intro"><p class="eyebrow">Teaching assignments · {{ academic_year }} · Semester {{ semester }}</p><h1>My courses</h1><p class="muted">Open each course to take attendance, maintain its gradebook, and review the enrolled roster.</p></section>
+<section class="course-grid">{% for course in courses %}<article class="panel course-card"><p class="eyebrow">{{ course.course_code }} · {{ course.credits }} credits</p><h2>{{ course.title }}</h2><p class="muted">{{ course.description or 'Course information' }}</p><div class="course-meta"><span>{{ course.enrolled }} approved student(s)</span><span>{{ course.academic_year }} · Semester {{ course.term }}</span></div><div class="button-row"><a class="button secondary" href="{{ url_for('faculty_course_attendance', course_code=course.course_code) }}">Course attendance</a><a class="button primary" href="{{ url_for('faculty_course_grades', course_code=course.course_code) }}">Gradebook</a></div></article>{% else %}<article class="panel empty">No course assignments were found for this term. Contact your academic administrator.</article>{% endfor %}</section>
+{% endblock %}

@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}My attendance · Student Management{% endblock %}
+{% block title %}My attendance · University Management{% endblock %}
 {% block content %}
 <section class="page-intro">
   <p class="eyebrow">Student portal</p>
   <h1>Attendance history</h1>
-  <p class="muted">Review your recorded school days and monthly attendance.</p>
+  <p class="muted">Review your recorded university attendance days and monthly attendance.</p>
 </section>
 <section class="panel table-wrap" aria-label="Monthly attendance history">
   <table>
-    <thead><tr><th scope="col">Month</th><th scope="col">School days recorded</th><th scope="col">Days attended</th><th scope="col">Attendance</th></tr></thead>
+    <thead><tr><th scope="col">Month</th><th scope="col">Days scheduled</th><th scope="col">Days attended</th><th scope="col">Attendance</th></tr></thead>
     <tbody>
     {% for row in rows %}
       <tr><td>{{ row.year }}-{{ '%02d'|format(row.month) }}</td><td>{{ row.school_days }}</td><td>{{ row.attended_days or 0 }}</td><td>{% if row.school_days %}{{ ((row.attended_days or 0) / row.school_days * 100)|round(1) }}%{% else %}—{% endif %}</td></tr>

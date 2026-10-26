@@ -1,20 +1,38 @@
 {% extends 'base.html' %}
-{% block title %}My profile · Student Management{% endblock %}
+{% block title %}Student portal · University Management{% endblock %}
 {% block content %}
 <section class="page-intro">
-  <p class="eyebrow">Student portal</p>
+  <p class="eyebrow">Student portal · {{ academic_year }} · Semester {{ semester }}</p>
   <h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
-  <p class="muted">Your school profile and services are available below.</p>
+  <p class="muted">Your academic services, results, attendance, and university notices.</p>
 </section>
 <section class="panel profile-grid" aria-label="Student profile">
   <div><span>Student ID</span><strong>{{ profile.id }}</strong></div>
-  <div><span>Class</span><strong>{{ profile.std }} · {{ profile.division }}</strong></div>
+  <div><span>Year of study</span><strong>{{ profile.std }}</strong></div>
+  <div><span>Section</span><strong>{{ profile.division }}</strong></div>
   <div><span>Roll number</span><strong>{{ profile.roll_no }}</strong></div>
-  <div><span>Username</span><strong>{{ g.user.uname }}</strong></div>
+  <div><span>Date of birth</span><strong>{{ profile.dob }}</strong></div>
+  <div><span>Blood group</span><strong>{{ profile.bloodgroup or 'Not recorded' }}</strong></div>
+  <div><span>Phone</span><strong>{{ profile.phoneno }}</strong></div>
+  <div><span>Address</span><strong>{{ profile.address }}</strong></div>
+  <div><span>Parent / guardian</span><strong>{{ profile.father_name }}{% if profile.mother_name %} · {{ profile.mother_name }}{% endif %}</strong></div>
+  <div><span>Admission date</span><strong>{{ profile.doa }}</strong></div>
 </section>
-<div class="section-heading"><div><p class="eyebrow">Student services</p><h2>Attendance and fees</h2></div></div>
-<section class="cards two" aria-label="Student services">
-  <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Attendance</span><strong>View record</strong><small>Review your attendance by month.</small></a>
-  <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><strong>View record</strong><small>Review fee plans and payments.</small></a>
+<section aria-label="Current registration summary" class="cards two">
+  <a class="stat-card" href="{{ url_for('student_courses') }}"><span>Current course registrations</span><strong>{{ course_summary.total or 0 }}</strong><small>{% if course_summary.pending %}{{ course_summary.pending }} request(s) awaiting review{% else %}Review available courses and registration status{% endif %}</small></a>
+  <a class="stat-card" href="{{ url_for('student_transcript') }}"><span>Academic record</span><strong>View results</strong><small>See grades and course attendance for approved courses.</small></a>
 </section>
+<div class="section-heading"><div><p class="eyebrow">Student services</p><h2>Academic services</h2></div></div>
+<section class="cards quick-actions" aria-label="Student services">
+  <a class="stat-card" href="{{ url_for('student_courses') }}"><span>Courses</span><small>Browse this semester’s courses and request registration.</small></a>
+  <a class="stat-card" href="{{ url_for('student_transcript') }}"><span>Transcript</span><small>Review grades, credits, and course attendance.</small></a>
+  <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Daily attendance</span><small>Check your monthly attendance history.</small></a>
+  <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><small>View fee plans and payments recorded for your account.</small></a>
+  <a class="stat-card" href="{{ url_for('schedule') }}"><span>Timetable</span><small>See scheduled classes for your approved courses.</small></a>
+  <a class="stat-card" href="{{ url_for('announcements') }}"><span>Notices</span><small>Read current university announcements.</small></a>
+</section>
+{% if announcements %}
+<div class="section-heading"><div><p class="eyebrow">University communications</p><h2>Recent notices</h2></div><a href="{{ url_for('announcements') }}">All notices</a></div>
+<section class="notice-list">{% for notice in announcements %}<article class="panel notice-card"><div class="notice-meta">{{ notice.created_at }} · {{ notice.author or 'University office' }}</div><h3>{{ notice.title }}</h3><p>{{ notice.body }}</p></article>{% endfor %}</section>
+{% endif %}
 {% endblock %}

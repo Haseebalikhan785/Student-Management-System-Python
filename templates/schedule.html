@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Timetable · University Management{% endblock %}
+{% block content %}
+<section class="page-intro"><p class="eyebrow">Academic timetable · {{ academic_year }} · Semester {{ semester }}</p><h1>{% if g.user.typeofuser == 'faculty' %}Teaching timetable{% elif g.user.typeofuser == 'student' %}My class timetable{% else %}University timetable{% endif %}</h1><p class="muted">Current-term course meetings, teaching staff, and assigned rooms.</p></section>
+{% set day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+<section class="schedule-grid">{% for day in range(7) %}{% set day_rows = rows|selectattr('weekday','equalto',day)|list %}{% if day_rows %}<section class="panel schedule-day"><h2>{{ day_names[day] }}</h2>{% for item in day_rows %}<article class="schedule-entry"><time>{{ item.starts_at }}–{{ item.ends_at }}</time><strong>{{ item.course_code }} · {{ item.title }}</strong><span>{{ item.room }}{% if g.user.typeofuser != 'faculty' %} · {{ item.faculty_name }}{% endif %}</span></article>{% endfor %}</section>{% endif %}{% endfor %}{% if not rows %}<article class="panel empty">No classes have been scheduled for your current courses this semester.</article>{% endif %}</section>
+{% endblock %}

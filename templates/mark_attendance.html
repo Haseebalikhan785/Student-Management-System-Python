@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Mark attendance · Student Management{% endblock %}
+{% block title %}Mark attendance · University Management{% endblock %}
 {% block content %}
 <section class="page-intro">
   <p class="eyebrow">Faculty tools</p>
@@ -13,7 +13,7 @@
 <form method="post" class="panel table-wrap">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{ selected_date }}">
   <table>
-    <thead><tr><th scope="col">ID</th><th scope="col">Student</th><th scope="col">Class</th><th scope="col">Roll</th><th scope="col">Attendance</th></tr></thead>
+    <thead><tr><th scope="col">ID</th><th scope="col">Student</th><th scope="col">Year / section</th><th scope="col">Roll</th><th scope="col">Attendance</th></tr></thead>
     <tbody>
     {% for student in students %}
       <tr><td>{{ student.id }}</td><td>{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</td><td>{{ student.std }} · {{ student.division }}</td><td>{{ student.roll_no }}</td><td><select name="student_{{ student.id }}" aria-label="Attendance for {{ student.first_name }} {{ student.last_name }}"><option value="Y" {% if attendance_by_student.get(student.id) == 'Y' %}selected{% endif %}>Present</option><option value="N" {% if attendance_by_student.get(student.id) == 'N' %}selected{% endif %}>Absent</option></select></td></tr>

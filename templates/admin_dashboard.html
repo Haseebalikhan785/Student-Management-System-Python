@@ -1,34 +1,37 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard · Student Management{% endblock %}
+{% block title %}University overview · University Management{% endblock %}
 {% block content %}
 <section class="page-intro">
   <p class="eyebrow">{{ g.user.typeofuser|replace('superadmin', 'super admin')|title }} workspace</p>
-  <h1>Welcome, {{ g.user.uname }}</h1>
-  <p class="muted">Choose a section to review school records or manage daily tasks.</p>
+  <h1>University overview</h1>
+  <p class="muted">A current view of people, courses, registrations, and academic operations.</p>
 </section>
-
-<section aria-label="School totals" class="cards">
-  <a class="stat-card" href="{{ url_for('records', record_type='students') }}">
-    <span>Students</span><strong>{{ totals.students }}</strong><small>View the student directory</small>
-  </a>
-  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}">
-    <span>Faculty</span><strong>{{ totals.faculty }}</strong><small>View faculty profiles</small>
-  </a>
-  {% if g.user.typeofuser == 'superadmin' %}
-  <a class="stat-card" href="{{ url_for('records', record_type='admins') }}">
-    <span>Administrators</span><strong>{{ totals.admins }}</strong><small>Manage administrator accounts</small>
-  </a>
-  {% endif %}
+<section aria-label="University totals" class="cards">
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>{{ totals.students }}</strong><small>Open student records</small></a>
+  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}"><span>Faculty</span><strong>{{ totals.faculty }}</strong><small>Open faculty directory</small></a>
+  <a class="stat-card" href="{{ url_for('academics') }}"><span>Active courses</span><strong>{{ totals.courses }}</strong><small>Manage departments and offerings</small></a>
+  <a class="stat-card" href="{{ url_for('enrolments') }}"><span>Registrations to review</span><strong>{{ totals.pending_enrollments }}</strong><small>Pending course requests</small></a>
 </section>
-
-<div class="section-heading"><div><p class="eyebrow">Administration</p><h2>School operations</h2></div></div>
-<section class="cards quick-actions" aria-label="School operations">
-  <a class="stat-card" href="{{ url_for('create_record_page', record_type='students') }}"><span>Add a student</span><small>Create a student profile and sign-in account.</small></a>
-  <a class="stat-card" href="{{ url_for('create_record_page', record_type='faculty') }}"><span>Add faculty</span><small>Create a faculty profile and sign-in account.</small></a>
-  <a class="stat-card" href="{{ url_for('fees_manage') }}"><span>Fee management</span><small>Review fee plans and payment records.</small></a>
-  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Take attendance</span><small>Record attendance for a class and date.</small></a>
+<section class="term-strip" aria-label="Current academic term">
+  <div><span>Current academic year</span><strong>{{ academic_year }}</strong></div>
+  <div><span>Current semester</span><strong>{{ semester }}</strong></div>
+  <div><span>Administrators</span><strong>{{ totals.admins }}</strong></div>
 </section>
-{% if g.user.typeofuser == 'superadmin' %}
-<p class="muted">Need another administrator? <a href="{{ url_for('create_record_page', record_type='admins') }}">Create an administrator account</a>.</p>
+<div class="section-heading"><div><p class="eyebrow">Administration</p><h2>University operations</h2></div></div>
+<section class="cards quick-actions" aria-label="University operations">
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='students') }}"><span>Student records</span><small>Add a student account or update personal and academic details.</small></a>
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='faculty') }}"><span>Faculty records</span><small>Maintain faculty profiles and university contact information.</small></a>
+  <a class="stat-card" href="{{ url_for('academics') }}"><span>Academic catalogue</span><small>Manage departments, courses, teaching assignments, and rooms.</small></a>
+  <a class="stat-card" href="{{ url_for('reports') }}"><span>Institution reports</span><small>Review registration, course attendance, and operational totals.</small></a>
+  <a class="stat-card" href="{{ url_for('fees_manage') }}"><span>Fees and payments</span><small>Maintain fee schedules and payment records.</small></a>
+  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Daily attendance</span><small>Record the university’s existing daily class attendance.</small></a>
+  <a class="stat-card" href="{{ url_for('announcements') }}"><span>Notices</span><small>Publish announcements for students, faculty, or staff.</small></a>
+  {% if g.user.typeofuser == 'superadmin' %}<a class="stat-card" href="{{ url_for('records', record_type='admins') }}"><span>Administrators</span><small>Review university administrator accounts.</small></a>{% endif %}
+</section>
+{% if announcements %}
+<div class="section-heading"><div><p class="eyebrow">University communications</p><h2>Recent notices</h2></div><a href="{{ url_for('announcements') }}">All notices</a></div>
+<section class="notice-list">
+  {% for notice in announcements %}<article class="panel notice-card"><div class="notice-meta">{{ notice.created_at }} · {{ notice.author or 'University office' }}</div><h3>{{ notice.title }}</h3><p>{{ notice.body }}</p></article>{% endfor %}
+</section>
 {% endif %}
 {% endblock %}

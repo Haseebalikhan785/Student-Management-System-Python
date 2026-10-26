@@ -348,6 +348,54 @@ button { font: inherit; cursor: pointer; }
 .assignment-panel { max-width: 680px; }
 .assignment-panel form { max-width: 420px; }
 .assignment-panel p { margin-bottom: 18px; }
+.term-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 22px 0 30px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.term-strip div { min-width: 170px; padding: 14px 20px; border-right: 1px solid var(--line); }
+.term-strip div:last-child { border-right: 0; }
+.term-strip span, .term-strip strong { display: block; }
+.term-strip span { color: var(--muted); font-size: 12px; }
+.term-strip strong { margin-top: 3px; color: var(--navy); font-size: 16px; }
+.course-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.course-card { display: grid; align-content: start; gap: 12px; margin: 0; }
+.course-card h2 { margin: -5px 0 0; }
+.course-card p { margin: 0; }
+.course-card .primary { justify-self: start; }
+.course-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.status-pill { display: inline-flex; align-items: center; padding: 3px 8px; border: 1px solid var(--line-dark); border-radius: 99px; color: var(--ink-soft); background: #f8f8f6; font-size: 11px; font-weight: 700; }
+.status-pill.approved { border-color: #b9d6c2; color: var(--success); background: var(--success-bg); }
+.status-pill.pending { border-color: #e2d3aa; color: #765915; background: #faf6e8; }
+.status-pill.rejected { border-color: #e0baba; color: var(--error); background: var(--error-bg); }
+.notice-list { display: grid; gap: 12px; }
+.notice-card { margin-top: 0; }
+.notice-card h2, .notice-card h3 { margin: 9px 0; }
+.notice-card p { margin: 0; white-space: pre-line; }
+.notice-meta { color: var(--muted); font-size: 11px; }
+.notice-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.schedule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.schedule-day { margin: 0; }
+.schedule-day h2 { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.schedule-entry { display: grid; gap: 3px; padding: 12px 0; border-bottom: 1px solid #edf0f1; }
+.schedule-entry:last-child { border-bottom: 0; }
+.schedule-entry time { color: var(--wine); font-size: 12px; font-weight: 700; }
+.schedule-entry strong { color: var(--navy); font-size: 14px; }
+.schedule-entry span { color: var(--muted); font-size: 12px; }
+.filter-tabs { display: flex; gap: 6px; margin: 18px 0; border-bottom: 1px solid var(--line-dark); }
+.filter-tabs a { padding: 9px 12px; color: var(--ink-soft); text-decoration: none; }
+.filter-tabs a.active { border-bottom: 2px solid var(--wine); color: var(--navy); font-weight: 700; }
+.inline-action { display: flex; align-items: center; gap: 6px; min-width: 180px; }
+.inline-action select { min-width: 100px; min-height: 34px; padding: 4px 7px; }
+.inline-action button { min-height: 34px; padding: 6px 9px; }
+.grade-input { width: 90px; min-width: 75px; }
+.attendance-choice select { min-width: 120px; }
+.small-note { margin-top: 15px; font-size: 12px; }
+.button-row .button { min-height: 38px; }
 .error-panel { max-width: 680px; margin: 8vh auto 0; padding: clamp(24px, 5vw, 42px); }
 .error-panel h1 { max-width: 560px; }
 .error-panel p:not(.eyebrow) { margin: 16px 0 24px; color: var(--ink-soft); }
@@ -364,6 +412,7 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 900px) {
   .quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .course-grid, .schedule-grid { grid-template-columns: 1fr; }
   .profile-grid div:nth-child(2) { border-right: 0; }
   .profile-grid div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
 }
@@ -401,6 +450,19 @@ button { font: inherit; cursor: pointer; }
   .date-filter { align-items: stretch; flex-direction: column; }
   .date-filter label { width: 100%; }
   .month-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .term-strip div { flex: 1 1 50%; border-bottom: 1px solid var(--line); }
+  .term-strip div:nth-child(even) { border-right: 0; }
+  .filter-tabs { overflow-x: auto; }
+  .inline-action { min-width: 160px; }
   th, td { padding: 10px 11px; }
   .footer { padding-inline: 16px; }
+}
+
+@media print {
+  .site-header, .footer, .skip-link, .button-row, button, a.button { display: none !important; }
+  body { background: #fff !important; color: #000 !important; font-size: 12pt; }
+  .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+  .panel { border: none !important; box-shadow: none !important; padding: 0 !important; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border-bottom: 1px solid #ddd !important; padding: 6px 8px !important; }
 }

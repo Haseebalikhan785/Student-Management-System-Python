@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Academic transcript · University Management{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Student records</p>
+    <h1>Academic transcript</h1>
+    <p class="muted">Approved course registrations, posted grades, credits, and course attendance.</p>
+  </div>
+  <button class="button secondary" type="button" onclick="window.print()">Print transcript</button>
+</section>
+
+{% if rows %}
+<section class="cards two" aria-label="Academic standing summary">
+  <article class="stat-card">
+    <span>Cumulative GPA (CGPA)</span>
+    <strong>{{ cgpa if cgpa is not none else 'In progress' }}</strong>
+    <small>10-point scale based on evaluated courses</small>
+  </article>
+  <article class="stat-card">
+    <span>Credits earned / registered</span>
+    <strong>{{ earned_credits }} / {{ total_credits }}</strong>
+    <small>Undergraduate degree requirements</small>
+  </article>
+</section>
+{% endif %}
+
+<article class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Academic year</th>
+          <th>Semester</th>
+          <th>Course</th>
+          <th>Credits</th>
+          <th>Grade</th>
+          <th>Marks</th>
+          <th>Attendance</th>
+          <th>Faculty feedback</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.academic_year }}</td>
+          <td>{{ row.semester }}</td>
+          <td><strong>{{ row.course_code }}</strong><br>{{ row.title }}</td>
+          <td>{{ row.credits }}</td>
+          <td>
+            {% if row.letter_grade in ['O', 'A'] %}
+              <span class="status-pill approved">{{ row.letter_grade }}</span>
+            {% elif row.letter_grade in ['B', 'C'] %}
+              <span class="status-pill pending">{{ row.letter_grade }}</span>
+            {% elif row.letter_grade == 'F' %}
+              <span class="status-pill rejected">{{ row.letter_grade }}</span>
+            {% else %}
+              <span class="status-pill">{{ row.letter_grade or 'Pending' }}</span>
+            {% endif %}
+          </td>
+          <td>{% if row.marks is not none %}{{ row.marks }} / {{ row.maximum_marks }}{% else %}—{% endif %}</td>
+          <td>{% if row.meetings %}{{ row.attended }}/{{ row.meetings }} ({{ (row.attended * 100 / row.meetings)|round|int }}%){% else %}No classes recorded{% endif %}</td>
+          <td>{{ row.feedback or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="empty">Your approved courses and results will appear here.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>
+<p class="muted small-note">For official transcripts or corrections, contact the university academic registrar.</p>
+{% endblock %}

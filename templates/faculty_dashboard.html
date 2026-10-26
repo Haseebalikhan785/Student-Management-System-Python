@@ -1,24 +1,32 @@
 {% extends 'base.html' %}
-{% block title %}Faculty dashboard · Student Management{% endblock %}
+{% block title %}Faculty portal · University Management{% endblock %}
 {% block content %}
 <section class="page-intro">
-  <p class="eyebrow">Faculty portal</p>
+  <p class="eyebrow">Faculty portal · {{ academic_year }} · Semester {{ semester }}</p>
   <h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
-  <p class="muted">Your teaching assignment and class tools are available below.</p>
+  <p class="muted">Teaching assignments, class records, and university communications.</p>
 </section>
 <section class="panel profile-grid" aria-label="Faculty profile">
   <div><span>Faculty ID</span><strong>{{ profile.id }}</strong></div>
-  <div><span>Subject</span><strong>{{ profile.sub }}</strong></div>
-  <div><span>Email</span><strong>{{ profile.email }}</strong></div>
-  <div><span>Class assignment</span><strong>{% if assignment %}{{ assignment.std }} · {{ assignment.divison }}{% else %}Not assigned{% endif %}</strong></div>
+  <div><span>Academic discipline</span><strong>{{ profile.sub }}</strong></div>
+  <div><span>University email</span><strong>{{ profile.email }}</strong></div>
+  <div><span>Current course load</span><strong>{{ course_summary.total or 0 }} course(s)</strong></div>
+  <div><span>Year adviser assignment</span><strong>{% if assignment %}Year {{ assignment.std }} · Section {{ assignment.divison }}{% else %}Not assigned{% endif %}</strong></div>
 </section>
-<div class="section-heading"><div><p class="eyebrow">Teaching tools</p><h2>Class records</h2></div></div>
-<section class="cards two" aria-label="Teaching tools">
-  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>Open directory</strong><small>View students in your assigned class.</small></a>
-  {% if assignment %}
-  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Attendance</span><strong>Mark attendance</strong><small>Record attendance for your class.</small></a>
-  {% else %}
-  <a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Class teacher</span><strong>Set assignment</strong><small>Select the class you teach.</small></a>
-  {% endif %}
+<section class="cards two" aria-label="Teaching summary">
+  <a class="stat-card" href="{{ url_for('faculty_courses') }}"><span>Courses this semester</span><strong>{{ course_summary.total or 0 }}</strong><small>Open course rosters, attendance, and gradebooks.</small></a>
+  <a class="stat-card" href="{{ url_for('schedule') }}"><span>Teaching timetable</span><strong>View schedule</strong><small>Review your weekly teaching schedule and rooms.</small></a>
 </section>
+<div class="section-heading"><div><p class="eyebrow">Faculty services</p><h2>Teaching tools</h2></div></div>
+<section class="cards quick-actions" aria-label="Faculty services">
+  <a class="stat-card" href="{{ url_for('faculty_courses') }}"><span>My courses</span><small>View current course assignments and enrolment counts.</small></a>
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Student directory</span><small>Find student records available to faculty.</small></a>
+  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Daily attendance</span><small>Record attendance for your assigned class.</small></a>
+  <a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Year adviser</span><small>{% if assignment %}Review your class assignment.{% else %}Set your year adviser assignment.{% endif %}</small></a>
+  <a class="stat-card" href="{{ url_for('announcements') }}"><span>University notices</span><small>Read notices for students, faculty, and staff.</small></a>
+</section>
+{% if announcements %}
+<div class="section-heading"><div><p class="eyebrow">University communications</p><h2>Recent notices</h2></div><a href="{{ url_for('announcements') }}">All notices</a></div>
+<section class="notice-list">{% for notice in announcements %}<article class="panel notice-card"><div class="notice-meta">{{ notice.created_at }} · {{ notice.author or 'University office' }}</div><h3>{{ notice.title }}</h3><p>{{ notice.body }}</p></article>{% endfor %}</section>
+{% endif %}
 {% endblock %}

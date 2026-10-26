@@ -97,9 +97,9 @@ This project is distributed under the GNU General Public License v3.0. See [LICE
 
 This repository includes both the original Tkinter desktop app and a browser edition in `webapp.py`. Render runs the browser edition; the desktop app remains available through `python app.py` on a computer with a desktop environment.
 
-**Live browser app:** [Student Management System](https://student-management-system-web-hbun.onrender.com/)
+**Live browser app:** [University Management System](https://student-management-system-web-hbun.onrender.com/)
 
-The browser edition supports role-based sign-in and dashboards. Superadmins can manage administrator accounts; admins and superadmins can create, search, update, and remove student and faculty records, maintain yearly fee plans, record student fee payments, and take attendance. Faculty can view student records, assign their class, and record attendance for that class. Students can view their profile, fee history, and attendance history. New student, faculty, and admin records receive an account ID and a login in one transaction. The browser app also creates missing keyed fee, attendance, and class-assignment tables on first connection; this handles MySQL hosts that reject the original no-primary-key table definitions.
+The browser edition is branded University Management System and supports separate role-based dashboards for students, faculty, administrators, and superadmins. It includes student and faculty directories, academic departments and courses, faculty course assignments, student registration requests and approvals, course attendance, gradebooks, transcripts, timetables, notices, daily attendance, fee plans and records, and administrative reports. New student, faculty, and administrator records receive an account ID and a login in one transaction. The browser app creates missing application tables on first database connection; all newly created tables have primary keys for MySQL hosts that require them.
 
 ### Run locally
 
@@ -112,5 +112,31 @@ The browser edition supports role-based sign-in and dashboards. Superadmins can 
 ### Deploy to Render
 
 The included `render.yaml` prepares a Render web service. In Render, create a Blueprint from this repository, connect a reachable MySQL database, and enter its connection settings as the prompted environment variables. Keep the database private and use a strong, unique superadmin password. Render will provide the web URL and redeploy when the linked Git branch is updated.
+
+### Deploy to Google Cloud Run
+
+This repository includes a production-ready `Dockerfile` optimized for Google Cloud Run:
+
+1. **Via Google Cloud Console:**
+   - Go to Google Cloud Console > Cloud Run > Create Service.
+   - Choose "Continuously deploy from a repository" and link your GitHub repository.
+   - Select Dockerfile build.
+   - Under Variables & Secrets, set:
+     - `MYSQL_HOST` (e.g. your Aiven host `student-management-db-....aivencloud.com`)
+     - `MYSQL_PORT` (`21442`)
+     - `MYSQL_USER` (`avnadmin`)
+     - `MYSQL_PASSWORD` (your Aiven password)
+     - `MYSQL_DATABASE` (`students_db` or `defaultdb`)
+     - `SECRET_KEY` (a random secure string)
+     - `COOKIE_SECURE` (`true`)
+
+2. **Via gcloud CLI:**
+   ```bash
+   gcloud run deploy university-management \
+     --source . \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --set-env-vars MYSQL_HOST="...",MYSQL_PORT="21442",MYSQL_USER="...",MYSQL_PASSWORD="...",MYSQL_DATABASE="...",SECRET_KEY="..."
+   ```
 
 This is an academic project, not a production school information system. Before putting real student data online, review privacy, backup, and access-control requirements. Keep database credentials in the host's private environment settings and never commit them. The sample superadmin login (`admin` / `admin1234`) has been removed from the SQL setup script.

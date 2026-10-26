@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
-{% block title %}{{ title }} · Student Management{% endblock %}
+{% block title %}{{ title }} · University Management{% endblock %}
 {% block content %}
-<p class="eyebrow">School records</p>
+<p class="eyebrow">University records</p>
 <div class="page-heading">
-  <div><h1>{{ title }}</h1><p class="muted">Review and manage the school directory.</p></div>
+  <div><h1>{{ title }}</h1><p class="muted">Review and manage the university directory.</p></div>
   {% if can_manage %}
   <a class="button primary" href="{{ url_for('create_record_page', record_type=record_type) }}">{% if record_type == 'students' %}Add student{% elif record_type == 'faculty' %}Add faculty{% else %}Add administrator{% endif %}</a>
   {% endif %}
 </div>
 <form method="get" class="search-bar" role="search">
   <label class="visually-hidden" for="record-search">Search {{ title|lower }}</label>
-  <input id="record-search" name="q" value="{{ search_text }}" placeholder="Search by name, ID, class or subject">
+  <input id="record-search" name="q" value="{{ search_text }}" placeholder="Search by name, ID, year or subject">
   <button class="secondary" type="submit">Search</button>
   {% if search_text %}<a href="{{ url_for('records', record_type=record_type) }}">Clear search</a>{% endif %}
 </form>

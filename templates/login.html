@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
-{% block title %}Sign in · Student Management{% endblock %}
+{% block title %}Sign in · University Management{% endblock %}
 {% block content %}
 <section class="login-shell" aria-labelledby="login-title">
   <aside class="login-aside">
     <div>
-      <p class="eyebrow">School portal</p>
-      <h2>Student and academic records</h2>
+      <p class="eyebrow">University portal</p>
+      <h2>University academic services</h2>
       <div class="login-aside-rule" aria-hidden="true"></div>
-      <p>Access student profiles, faculty details, attendance, and fee records.</p>
+      <p>Access course registration, academic records, results, attendance, and university services.</p>
     </div>
-    <p>For school staff and students</p>
+    <p>For students, faculty, and university staff</p>
   </aside>
   <div class="login-card">
     <p class="eyebrow">Account access</p>
     <h1 id="login-title">Welcome back</h1>
-    <p class="muted">Sign in with the account provided by your school administrator.</p>
+    <p class="muted">Sign in with the account provided by your university administrator.</p>
     <form method="post" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Username<input name="username" autocomplete="username" required autofocus></label>
