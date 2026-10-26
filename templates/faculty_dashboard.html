@@ -1,15 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}Faculty dashboard · Student Management{% endblock %}
 {% block content %}
-<p class="eyebrow">FACULTY PORTAL</p><h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
-<div class="panel profile-grid">
+<section class="page-intro">
+  <p class="eyebrow">Faculty portal</p>
+  <h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
+  <p class="muted">Your teaching assignment and class tools are available below.</p>
+</section>
+<section class="panel profile-grid" aria-label="Faculty profile">
   <div><span>Faculty ID</span><strong>{{ profile.id }}</strong></div>
   <div><span>Subject</span><strong>{{ profile.sub }}</strong></div>
   <div><span>Email</span><strong>{{ profile.email }}</strong></div>
   <div><span>Class assignment</span><strong>{% if assignment %}{{ assignment.std }} · {{ assignment.divison }}{% else %}Not assigned{% endif %}</strong></div>
-</div>
-<div class="cards two">
-  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>Open</strong><small>View student directory</small></a>
-  {% if assignment %}<a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Attendance</span><strong>Mark</strong><small>Record your assigned class</small></a>{% else %}<a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Class teacher</span><strong>Assign</strong><small>Select the class you teach</small></a>{% endif %}
-</div>
+</section>
+<div class="section-heading"><div><p class="eyebrow">Teaching tools</p><h2>Class records</h2></div></div>
+<section class="cards two" aria-label="Teaching tools">
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>Open directory</strong><small>View students in your assigned class.</small></a>
+  {% if assignment %}
+  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Attendance</span><strong>Mark attendance</strong><small>Record attendance for your class.</small></a>
+  {% else %}
+  <a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Class teacher</span><strong>Set assignment</strong><small>Select the class you teach.</small></a>
+  {% endif %}
+</section>
 {% endblock %}

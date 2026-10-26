@@ -3,43 +3,63 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d2d42">
   <title>{% block title %}Student Management{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=4) }}">
 </head>
-<body>
-  {% if g.user %}
-  <header class="topbar">
-    <a class="brand" href="{{ url_for('dashboard') }}">Student Management</a>
-    <nav>
-      {% if g.user.typeofuser in ['admin', 'superadmin'] %}
-        <a href="{{ url_for('records', record_type='students') }}">Students</a>
-        <a href="{{ url_for('records', record_type='faculty') }}">Faculty</a>
-        <a href="{{ url_for('fees_manage') }}">Fees</a>
-        <a href="{{ url_for('mark_attendance') }}">Attendance</a>
-        {% if g.user.typeofuser == 'superadmin' %}<a href="{{ url_for('records', record_type='admins') }}">Admins</a>{% endif %}
-      {% elif g.user.typeofuser == 'faculty' %}
-        <a href="{{ url_for('records', record_type='students') }}">Students</a>
-        <a href="{{ url_for('mark_attendance') }}">Attendance</a>
-        <a href="{{ url_for('faculty_assignment') }}">Class teacher</a>
+<body class="{% if g.user %}app-layout{% else %}public-layout{% endif %}">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="masthead">
+      <a class="brand" href="{{ url_for('dashboard') if g.user else url_for('login') }}">
+        <span class="brand-mark" aria-hidden="true">SM</span>
+        <span class="brand-copy">
+          <strong>Student Management</strong>
+          <small>Academic records portal</small>
+        </span>
+      </a>
+      {% if g.user %}
+      <div class="account-controls">
+        <span class="user-label"><small>Signed in as</small><strong>{{ g.user.uname }}</strong></span>
+        <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="signout-button" type="submit">Sign out</button>
+        </form>
+      </div>
       {% else %}
-        <a href="{{ url_for('student_attendance') }}">Attendance</a>
-        <a href="{{ url_for('student_fees') }}">Fees</a>
+      <span class="portal-label">School portal</span>
       {% endif %}
-      <span class="account">{{ g.user.uname }}</span>
-      <a href="{{ url_for('change_password') }}">Password</a>
-      <form method="post" action="{{ url_for('logout') }}" class="inline-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="link-button" type="submit">Sign out</button>
-      </form>
-    </nav>
+    </div>
+    {% if g.user %}
+    <div class="nav-band">
+      <nav class="primary-nav" aria-label="Primary navigation">
+        {% if g.user.typeofuser in ['admin', 'superadmin'] %}
+          <a href="{{ url_for('records', record_type='students') }}" {% if request.endpoint == 'records' and request.view_args.get('record_type') == 'students' %}aria-current="page"{% endif %}>Students</a>
+          <a href="{{ url_for('records', record_type='faculty') }}" {% if request.endpoint == 'records' and request.view_args.get('record_type') == 'faculty' %}aria-current="page"{% endif %}>Faculty</a>
+          <a href="{{ url_for('fees_manage') }}" {% if request.endpoint == 'fees_manage' %}aria-current="page"{% endif %}>Fees</a>
+          <a href="{{ url_for('mark_attendance') }}" {% if request.endpoint == 'mark_attendance' %}aria-current="page"{% endif %}>Attendance</a>
+          {% if g.user.typeofuser == 'superadmin' %}<a href="{{ url_for('records', record_type='admins') }}" {% if request.endpoint == 'records' and request.view_args.get('record_type') == 'admins' %}aria-current="page"{% endif %}>Administrators</a>{% endif %}
+        {% elif g.user.typeofuser == 'faculty' %}
+          <a href="{{ url_for('records', record_type='students') }}" {% if request.endpoint == 'records' %}aria-current="page"{% endif %}>Students</a>
+          <a href="{{ url_for('mark_attendance') }}" {% if request.endpoint == 'mark_attendance' %}aria-current="page"{% endif %}>Attendance</a>
+          <a href="{{ url_for('faculty_assignment') }}" {% if request.endpoint == 'faculty_assignment' %}aria-current="page"{% endif %}>Class teacher</a>
+        {% else %}
+          <a href="{{ url_for('student_attendance') }}" {% if request.endpoint == 'student_attendance' %}aria-current="page"{% endif %}>Attendance</a>
+          <a href="{{ url_for('student_fees') }}" {% if request.endpoint == 'student_fees' %}aria-current="page"{% endif %}>Fees</a>
+        {% endif %}
+        <a href="{{ url_for('change_password') }}" {% if request.endpoint == 'change_password' %}aria-current="page"{% endif %}>Account settings</a>
+      </nav>
+    </div>
+    {% endif %}
   </header>
-  {% endif %}
-  <main class="container {% if not g.user %}narrow{% endif %}">
+  <main id="main-content" class="container {% if not g.user %}narrow{% endif %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}<div class="notice {{ category }}">{{ message }}</div>{% endfor %}
+      {% for category, message in messages %}
+        <div class="notice {{ category }}" role="status">{{ message }}</div>
+      {% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-  <footer>Student Management System · Maintained by Haseeb Ali · Original project by Prathamesh Dhande</footer>
+  <footer class="footer">Student Management System · Maintained by Haseeb Ali · Original project by Prathamesh Dhande</footer>
 </body>
 </html>

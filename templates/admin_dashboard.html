@@ -1,20 +1,34 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard · Student Management{% endblock %}
 {% block content %}
-<p class="eyebrow">{{ g.user.typeofuser|replace('superadmin', 'super admin')|title }} workspace</p>
-<h1>Welcome, {{ g.user.uname }}</h1>
-<p class="muted">Choose a section to view school records.</p>
-<div class="cards">
-  <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Students</span><strong>{{ totals.students }}</strong><small>Browse, search, and manage students →</small></a>
-  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}"><span>Faculty</span><strong>{{ totals.faculty }}</strong><small>Browse, search, and manage faculty →</small></a>
-  {% if g.user.typeofuser == 'superadmin' %}<a class="stat-card" href="{{ url_for('records', record_type='admins') }}"><span>Administrators</span><strong>{{ totals.admins }}</strong><small>Manage administrator accounts →</small></a>{% endif %}
-</div>
-<div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h2>Manage your school</h2></div></div>
-<div class="cards quick-actions">
-  <a class="stat-card" href="{{ url_for('create_record_page', record_type='students') }}"><span>＋ Add student</span><small>Create a student profile and login.</small></a>
-  <a class="stat-card" href="{{ url_for('create_record_page', record_type='faculty') }}"><span>＋ Add faculty</span><small>Create a faculty profile and login.</small></a>
-  <a class="stat-card" href="{{ url_for('fees_manage') }}"><span>₹ Fee management</span><small>Set fee plans and record payments.</small></a>
-  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>✓ Take attendance</span><small>Record attendance for today or another date.</small></a>
-</div>
-{% if g.user.typeofuser == 'superadmin' %}<p class="muted">Super administrator: you can also <a href="{{ url_for('create_record_page', record_type='admins') }}">add an administrator</a>.</p>{% endif %}
+<section class="page-intro">
+  <p class="eyebrow">{{ g.user.typeofuser|replace('superadmin', 'super admin')|title }} workspace</p>
+  <h1>Welcome, {{ g.user.uname }}</h1>
+  <p class="muted">Choose a section to review school records or manage daily tasks.</p>
+</section>
+
+<section aria-label="School totals" class="cards">
+  <a class="stat-card" href="{{ url_for('records', record_type='students') }}">
+    <span>Students</span><strong>{{ totals.students }}</strong><small>View the student directory</small>
+  </a>
+  <a class="stat-card" href="{{ url_for('records', record_type='faculty') }}">
+    <span>Faculty</span><strong>{{ totals.faculty }}</strong><small>View faculty profiles</small>
+  </a>
+  {% if g.user.typeofuser == 'superadmin' %}
+  <a class="stat-card" href="{{ url_for('records', record_type='admins') }}">
+    <span>Administrators</span><strong>{{ totals.admins }}</strong><small>Manage administrator accounts</small>
+  </a>
+  {% endif %}
+</section>
+
+<div class="section-heading"><div><p class="eyebrow">Administration</p><h2>School operations</h2></div></div>
+<section class="cards quick-actions" aria-label="School operations">
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='students') }}"><span>Add a student</span><small>Create a student profile and sign-in account.</small></a>
+  <a class="stat-card" href="{{ url_for('create_record_page', record_type='faculty') }}"><span>Add faculty</span><small>Create a faculty profile and sign-in account.</small></a>
+  <a class="stat-card" href="{{ url_for('fees_manage') }}"><span>Fee management</span><small>Review fee plans and payment records.</small></a>
+  <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Take attendance</span><small>Record attendance for a class and date.</small></a>
+</section>
+{% if g.user.typeofuser == 'superadmin' %}
+<p class="muted">Need another administrator? <a href="{{ url_for('create_record_page', record_type='admins') }}">Create an administrator account</a>.</p>
+{% endif %}
 {% endblock %}

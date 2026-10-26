@@ -1,15 +1,20 @@
 {% extends 'base.html' %}
 {% block title %}My profile · Student Management{% endblock %}
 {% block content %}
-<p class="eyebrow">STUDENT PORTAL</p><h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
-<div class="panel profile-grid">
+<section class="page-intro">
+  <p class="eyebrow">Student portal</p>
+  <h1>Welcome, {{ profile.first_name }} {{ profile.last_name }}</h1>
+  <p class="muted">Your school profile and services are available below.</p>
+</section>
+<section class="panel profile-grid" aria-label="Student profile">
   <div><span>Student ID</span><strong>{{ profile.id }}</strong></div>
   <div><span>Class</span><strong>{{ profile.std }} · {{ profile.division }}</strong></div>
   <div><span>Roll number</span><strong>{{ profile.roll_no }}</strong></div>
   <div><span>Username</span><strong>{{ g.user.uname }}</strong></div>
-</div>
-<div class="cards two">
-  <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Attendance</span><strong>View</strong><small>See monthly attendance</small></a>
-  <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><strong>View</strong><small>See fees by academic year</small></a>
-</div>
+</section>
+<div class="section-heading"><div><p class="eyebrow">Student services</p><h2>Attendance and fees</h2></div></div>
+<section class="cards two" aria-label="Student services">
+  <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Attendance</span><strong>View record</strong><small>Review your attendance by month.</small></a>
+  <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><strong>View record</strong><small>Review fee plans and payments.</small></a>
+</section>
 {% endblock %}

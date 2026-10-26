@@ -1,27 +1,39 @@
 {% extends 'base.html' %}
 {% block title %}{{ title }} · Student Management{% endblock %}
 {% block content %}
-<p class="eyebrow">SCHOOL RECORDS</p><h1>{{ title }}</h1>
-<p class="muted">{% if is_new %}Create the school record and its sign-in account together.{% else %}Update the record and sign-in username. Leave the password blank to keep the current password.{% endif %}</p>
+<p class="eyebrow">School records</p>
+<div class="page-intro"><h1>{{ title }}</h1><p class="muted">{% if is_new %}Enter the profile details and create its sign-in account.{% else %}Update the profile and sign-in username. Leave the password blank to keep the current password.{% endif %}</p></div>
 <form method="post" class="panel form-panel">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <h2>Personal information</h2>
-  <div class="form-grid">
-    {% for name, label, kind, required in fields %}
-      <label class="{% if kind == 'textarea' %}wide{% endif %}">{{ label }}{% if required %} <span class="required">*</span>{% endif %}
-        {% set value = request.form.get(name, '') if request.method == 'POST' else (record[name] if record and record[name] is not none else '') %}
-        {% if kind == 'textarea' %}<textarea name="{{ name }}" {% if required %}required{% endif %}>{{ value }}</textarea>
-        {% elif name == 'division' %}<select name="{{ name }}" required><option value="">Choose division</option>{% for option in ['A','B','C','D'] %}<option value="{{ option }}" {% if value|string|upper == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
-        {% elif name == 'sex' %}<select name="{{ name }}" required><option value="">Choose</option>{% for option in ['Male','Female','Other'] %}<option value="{{ option }}" {% if value|string|lower == option|lower %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
-        {% else %}<input type="{{ kind }}" name="{{ name }}" value="{{ value }}" {% if required %}required{% endif %} {% if name == 'std' %}min="1" max="10"{% elif name == 'age' %}min="18" max="100"{% elif name == 'experience' %}min="0" max="80"{% elif name == 'roll_no' %}min="1"{% elif name == 'phoneno' %}min="1000000000" max="9999999999"{% endif %}>{% endif %}
+  <section aria-labelledby="personal-heading">
+    <h2 id="personal-heading">Personal information</h2>
+    <div class="form-grid">
+      {% for name, label, kind, required in fields %}
+        <label class="{% if kind == 'textarea' %}wide{% endif %}">{{ label }}{% if required %} <span class="required">*</span>{% endif %}
+          {% set value = request.form.get(name, '') if request.method == 'POST' else (record[name] if record and record[name] is not none else '') %}
+          {% if kind == 'textarea' %}
+            <textarea name="{{ name }}" {% if required %}required{% endif %}>{{ value }}</textarea>
+          {% elif name == 'division' %}
+            <select name="{{ name }}" required><option value="">Choose division</option>{% for option in ['A','B','C','D'] %}<option value="{{ option }}" {% if value|string|upper == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+          {% elif name == 'sex' %}
+            <select name="{{ name }}" required><option value="">Choose</option>{% for option in ['Male','Female','Other'] %}<option value="{{ option }}" {% if value|string|lower == option|lower %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+          {% else %}
+            <input type="{{ kind }}" name="{{ name }}" value="{{ value }}" {% if required %}required{% endif %} {% if name == 'std' %}min="1" max="10"{% elif name == 'age' %}min="18" max="100"{% elif name == 'experience' %}min="0" max="80"{% elif name == 'roll_no' %}min="1"{% elif name == 'phoneno' %}min="1000000000" max="9999999999"{% endif %}>
+          {% endif %}
+        </label>
+      {% endfor %}
+    </div>
+  </section>
+  <hr>
+  <section aria-labelledby="account-heading">
+    <h2 id="account-heading">Sign-in account</h2>
+    <div class="form-grid account-grid">
+      <label>Username <span class="required">*</span><input name="username" value="{{ request.form.get('username', account.uname if account else '') }}" autocomplete="username" required></label>
+      <label>Password{% if is_new %} <span class="required">*</span>{% endif %}
+        <input type="password" name="password" autocomplete="new-password" {% if is_new %}required minlength="8"{% else %}minlength="8" placeholder="Leave blank to keep current password"{% endif %}>
       </label>
-    {% endfor %}
-  </div>
-  <hr><h2>Sign-in account</h2>
-  <div class="form-grid account-grid">
-    <label>Username <span class="required">*</span><input name="username" value="{{ request.form.get('username', account.uname if account else '') }}" autocomplete="username" required></label>
-    <label>Password{% if is_new %} <span class="required">*</span>{% endif %}<input type="password" name="password" autocomplete="new-password" {% if is_new %}required minlength="8"{% else %}minlength="8" placeholder="Leave blank to keep current password"{% endif %}></label>
-  </div>
+    </div>
+  </section>
   <div class="form-actions"><a class="secondary button" href="{{ url_for('records', record_type=record_type) }}">Cancel</a><button class="primary" type="submit">{{ 'Create account' if is_new else 'Save changes' }}</button></div>
 </form>
 {% endblock %}

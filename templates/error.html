@@ -1,1 +1,10 @@
-{% extends 'base.html' %}{% block title %}{{ code }} · Student Management{% endblock %}{% block content %}<section class="panel"><p class="eyebrow">{{ code }} ERROR</p><h1>We couldn’t complete that request</h1><p>{{ message }}</p><a href="{{ url_for('dashboard') if g.user else url_for('login') }}">Return to the app</a></section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ code }} · Student Management{% endblock %}
+{% block content %}
+<section class="panel error-panel">
+  <p class="eyebrow">{{ code }} error</p>
+  <h1>We couldn’t complete that request</h1>
+  <p>{{ message }}</p>
+  <a class="button secondary" href="{{ url_for('dashboard') if g.user else url_for('login') }}">Return to the portal</a>
+</section>
+{% endblock %}

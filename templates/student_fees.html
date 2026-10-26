@@ -1,6 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}My fees · Student Management{% endblock %}
-{% block content %}<p class="eyebrow">STUDENT PORTAL</p><h1>Fees history</h1>
-<section class="panel table-wrap"><table><thead><tr><th>Year</th><th>Monthly fee</th><th>Yearly fee</th><th>Full year</th><th>Monthly payments</th></tr></thead><tbody>
-{% for row in rows %}<tr><td>{{ row.year_ }}</td><td>{{ row.monthly if row.monthly is not none else '—' }}</td><td>{{ row.yearly if row.yearly is not none else '—' }}</td><td>{{ 'Paid' if row.fullyearpaid == 'Y' else 'Not paid' }}</td><td>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}{{ month|title }}: {{ 'Paid' if row[month] == 'Y' else 'Not paid' }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>{% else %}<tr><td colspan="5" class="empty">No fee records are available.</td></tr>{% endfor %}
-</tbody></table></section>{% endblock %}
+{% block content %}
+<section class="page-intro">
+  <p class="eyebrow">Student portal</p>
+  <h1>Fees history</h1>
+  <p class="muted">Review your yearly fee plan and the payments recorded by your school.</p>
+</section>
+<section class="panel table-wrap" aria-label="Fee payment history">
+  <table>
+    <thead><tr><th scope="col">Year</th><th scope="col">Monthly fee</th><th scope="col">Yearly fee</th><th scope="col">Full year</th><th scope="col">Monthly payments</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row.year_ }}</td><td>{{ row.monthly if row.monthly is not none else '—' }}</td><td>{{ row.yearly if row.yearly is not none else '—' }}</td><td>{{ 'Paid' if row.fullyearpaid == 'Y' else 'Not paid' }}</td>
+        <td>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}{{ month|title }}: {{ 'Paid' if row[month] == 'Y' else 'Not paid' }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty">No fee records are available.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

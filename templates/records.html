@@ -1,7 +1,41 @@
 {% extends 'base.html' %}
 {% block title %}{{ title }} · Student Management{% endblock %}
-{% block content %}<p class="eyebrow">SCHOOL RECORDS</p><div class="page-heading"><div><h1>{{ title }}</h1><p class="muted">Search, review, and manage school records.</p></div>{% if can_manage %}<a class="button primary" href="{{ url_for('create_record_page', record_type=record_type) }}">Add {{ title[:-1] if title.endswith('s') else title }}</a>{% endif %}</div>
-<form method="get" class="search-bar"><input name="q" value="{{ search_text }}" placeholder="Search by name, ID, class…"><button class="secondary" type="submit">Search</button>{% if search_text %}<a class="muted" href="{{ url_for('records', record_type=record_type) }}">Clear</a>{% endif %}</form>
-<section class="panel table-wrap"><table><thead><tr>{% if rows %}{% for key in rows[0].keys() %}<th>{{ key|replace('_',' ')|title }}</th>{% endfor %}{% if can_manage %}<th>Actions</th>{% endif %}{% else %}<th>{{ title }}</th>{% if can_manage %}<th>Actions</th>{% endif %}{% endif %}</tr></thead><tbody>
-{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value if value is not none else '—' }}</td>{% endfor %}{% if can_manage %}<td class="actions"><a href="{{ url_for('edit_record_page', record_type=record_type, user_id=row.id) }}">Edit</a><form method="post" action="{{ url_for('delete_record_page', record_type=record_type, user_id=row.id) }}" onsubmit="return confirm('Delete this record and its login? This cannot be undone.');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="link-button danger" type="submit">Delete</button></form></td>{% endif %}</tr>{% else %}<tr><td class="empty" colspan="{{ (rows[0]|length if rows else 1) + (1 if can_manage else 0) }}">No {{ record_type }} records found yet. {% if can_manage %}<a href="{{ url_for('create_record_page', record_type=record_type) }}">Add the first record</a>.{% endif %}</td></tr>{% endfor %}
-</tbody></table></section>{% endblock %}
+{% block content %}
+<p class="eyebrow">School records</p>
+<div class="page-heading">
+  <div><h1>{{ title }}</h1><p class="muted">Review and manage the school directory.</p></div>
+  {% if can_manage %}
+  <a class="button primary" href="{{ url_for('create_record_page', record_type=record_type) }}">{% if record_type == 'students' %}Add student{% elif record_type == 'faculty' %}Add faculty{% else %}Add administrator{% endif %}</a>
+  {% endif %}
+</div>
+<form method="get" class="search-bar" role="search">
+  <label class="visually-hidden" for="record-search">Search {{ title|lower }}</label>
+  <input id="record-search" name="q" value="{{ search_text }}" placeholder="Search by name, ID, class or subject">
+  <button class="secondary" type="submit">Search</button>
+  {% if search_text %}<a href="{{ url_for('records', record_type=record_type) }}">Clear search</a>{% endif %}
+</form>
+<section class="panel table-wrap" aria-label="{{ title }} directory">
+  <table>
+    <thead><tr>
+      {% if rows %}{% for key in rows[0].keys() %}<th scope="col">{{ key|replace('_',' ')|title }}</th>{% endfor %}{% else %}<th scope="col">{{ title }}</th>{% endif %}
+      {% if can_manage %}<th scope="col">Actions</th>{% endif %}
+    </tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        {% for value in row.values() %}<td>{{ value if value is not none else '—' }}</td>{% endfor %}
+        {% if can_manage %}<td class="actions">
+          <a href="{{ url_for('edit_record_page', record_type=record_type, user_id=row.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('delete_record_page', record_type=record_type, user_id=row.id) }}" onsubmit="return confirm('Delete this record and its login? This cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="link-button danger" type="submit">Delete</button>
+          </form>
+        </td>{% endif %}
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="{{ (rows[0]|length if rows else 1) + (1 if can_manage else 0) }}">No {{ record_type }} records found.{% if can_manage %} <a href="{{ url_for('create_record_page', record_type=record_type) }}">Add a record</a>.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

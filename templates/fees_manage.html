@@ -1,25 +1,37 @@
 {% extends 'base.html' %}
 {% block title %}Fee management · Student Management{% endblock %}
 {% block content %}
-<p class="eyebrow">ADMIN TOOLS</p><h1>Fee management</h1>
-<p class="muted">Set yearly fee plans and keep each student’s payment history up to date.</p>
+<section class="page-intro">
+  <p class="eyebrow">Administration</p>
+  <h1>Fee management</h1>
+  <p class="muted">Set yearly fee plans and keep each student’s payment history up to date.</p>
+</section>
 <div class="cards two fee-cards">
-  <section class="panel"><h2>Yearly fee plans</h2><form method="post" class="stack compact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="plan">
-    <div class="form-grid"><label>Academic year<input type="number" name="year" min="2000" max="2155" required></label><label>Monthly fee<input type="number" name="monthly" min="0" required></label><label>Yearly fee<input type="number" name="yearly" min="0" required></label></div><button class="primary" type="submit">Save fee plan</button></form>
-    <div class="table-wrap"><table><thead><tr><th>Year</th><th>Monthly</th><th>Yearly</th></tr></thead><tbody>{% for plan in plans %}<tr><td>{{ plan.year_ }}</td><td>{{ plan.monthly }}</td><td>{{ plan.yearly }}</td></tr>{% else %}<tr><td colspan="3" class="empty">No fee plans yet.</td></tr>{% endfor %}</tbody></table></div>
+  <section class="panel" aria-labelledby="fee-plans-heading">
+    <h2 id="fee-plans-heading">Yearly fee plans</h2>
+    <form method="post" class="stack compact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="plan">
+      <div class="form-grid"><label>Academic year<input type="number" name="year" min="2000" max="2155" required></label><label>Monthly fee<input type="number" name="monthly" min="0" required></label><label>Yearly fee<input type="number" name="yearly" min="0" required></label></div><button class="primary" type="submit">Save fee plan</button>
+    </form>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Year</th><th scope="col">Monthly</th><th scope="col">Yearly</th></tr></thead><tbody>{% for plan in plans %}<tr><td>{{ plan.year_ }}</td><td>{{ plan.monthly }}</td><td>{{ plan.yearly }}</td></tr>{% else %}<tr><td colspan="3" class="empty">No fee plans yet.</td></tr>{% endfor %}</tbody></table></div>
   </section>
-  <section class="panel"><h2>Student payments</h2><form method="get" class="stack compact-form">
-    <label>Student<select name="student_id" required><option value="">Choose a student</option>{% for student in students %}<option value="{{ student.id }}" {% if selected_student == student.id %}selected{% endif %}>{{ student.name }} · {{ student.id }}</option>{% endfor %}</select></label>
-    <label>Academic year<select name="year" required><option value="">Choose a year</option>{% for plan in plans %}<option value="{{ plan.year_ }}" {% if selected_year|string == plan.year_|string %}selected{% endif %}>{{ plan.year_ }}</option>{% endfor %}</select></label>
-    <button class="secondary" type="submit">Load payment record</button>
-  </form>
-  {% if selected_student and selected_year %}<form method="post" class="stack compact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payment"><input type="hidden" name="student_id" value="{{ selected_student }}"><input type="hidden" name="year" value="{{ selected_year }}">
-    <p class="muted">Mark the months that have been paid for {{ selected_year }}.</p><label class="check-row"><input type="checkbox" name="fullyearpaid" value="Y" {% if saved_payment and saved_payment.fullyearpaid == 'Y' %}checked{% endif %}> Full year paid</label>
-    <div class="month-grid">{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<label class="check-row"><input type="checkbox" name="months" value="{{ month }}" {% if saved_payment and saved_payment[month] == 'Y' %}checked{% endif %}>{{ month|title }}</label>{% endfor %}</div>
-    <button class="primary" type="submit">Save payment record</button>
-  </form>{% endif %}</section>
+  <section class="panel" aria-labelledby="student-payments-heading">
+    <h2 id="student-payments-heading">Student payments</h2>
+    <form method="get" class="stack compact-form">
+      <label>Student<select name="student_id" required><option value="">Choose a student</option>{% for student in students %}<option value="{{ student.id }}" {% if selected_student == student.id %}selected{% endif %}>{{ student.name }} · {{ student.id }}</option>{% endfor %}</select></label>
+      <label>Academic year<select name="year" required><option value="">Choose a year</option>{% for plan in plans %}<option value="{{ plan.year_ }}" {% if selected_year|string == plan.year_|string %}selected{% endif %}>{{ plan.year_ }}</option>{% endfor %}</select></label>
+      <button class="secondary" type="submit">Load payment record</button>
+    </form>
+    {% if selected_student and selected_year %}<form method="post" class="stack compact-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payment"><input type="hidden" name="student_id" value="{{ selected_student }}"><input type="hidden" name="year" value="{{ selected_year }}">
+      <p class="muted">Mark the months that have been paid for {{ selected_year }}.</p><label class="check-row"><input type="checkbox" name="fullyearpaid" value="Y" {% if saved_payment and saved_payment.fullyearpaid == 'Y' %}checked{% endif %}> Full year paid</label>
+      <div class="month-grid">{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<label class="check-row"><input type="checkbox" name="months" value="{{ month }}" {% if saved_payment and saved_payment[month] == 'Y' %}checked{% endif %}>{{ month|title }}</label>{% endfor %}</div>
+      <button class="primary" type="submit">Save payment record</button>
+    </form>{% endif %}
+  </section>
 </div>
-<section class="panel"><h2>Recent fee records</h2><div class="table-wrap"><table><thead><tr><th>Student</th><th>ID</th><th>Year</th><th>Full year</th>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<th>{{ month|title }}</th>{% endfor %}</tr></thead><tbody>
-{% for row in fee_rows %}<tr><td>{{ row.student }}</td><td>{{ row.id }}</td><td>{{ row.year_ }}</td><td>{{ 'Paid' if row.fullyearpaid == 'Y' else 'No' }}</td>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<td>{{ '✓' if row[month] == 'Y' else '—' }}</td>{% endfor %}</tr>{% else %}<tr><td class="empty" colspan="16">Fee records appear here once students are added.</td></tr>{% endfor %}
-</tbody></table></div></section>
+<section class="panel" aria-labelledby="recent-fees-heading">
+  <h2 id="recent-fees-heading">Recent fee records</h2>
+  <div class="table-wrap"><table><thead><tr><th scope="col">Student</th><th scope="col">ID</th><th scope="col">Year</th><th scope="col">Full year</th>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<th scope="col">{{ month|title }}</th>{% endfor %}</tr></thead><tbody>
+  {% for row in fee_rows %}<tr><td>{{ row.student }}</td><td>{{ row.id }}</td><td>{{ row.year_ }}</td><td>{{ 'Paid' if row.fullyearpaid == 'Y' else 'No' }}</td>{% for month in ['jan','feb','mar','april','may','june','july','aug','sept','oct','nov','dece'] %}<td>{{ '✓' if row[month] == 'Y' else '—' }}</td>{% endfor %}</tr>{% else %}<tr><td class="empty" colspan="16">No fee records are available.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
 {% endblock %}

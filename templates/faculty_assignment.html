@@ -1,8 +1,15 @@
 {% extends 'base.html' %}{% block title %}Class teacher · Student Management{% endblock %}{% block content %}
-<p class="eyebrow">FACULTY TOOLS</p><h1>Class teacher assignment</h1><section class="panel">
-<p class="muted">Choose the class you teach. This assignment controls which students you can view and whose attendance you can record.</p>
-{% if assignment %}<p>Current class: <strong>{{ assignment.std }} · {{ assignment.divison }}</strong></p>{% endif %}
-<form method="post" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<label>Standard<select name="standard" required>{% for number in range(1,11) %}<option value="{{ number }}" {% if assignment and assignment.std == number %}selected{% endif %}>{{ number }}</option>{% endfor %}</select></label>
-<label>Division<select name="division" required>{% for item in ['A','B','C','D'] %}<option value="{{ item }}" {% if assignment and assignment.divison == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
-<button class="primary" type="submit">Save class</button></form></section>{% endblock %}
+<section class="page-intro">
+  <p class="eyebrow">Faculty tools</p>
+  <h1>Class teacher assignment</h1>
+  <p class="muted">Choose the class you teach. This assignment controls which students you can view and whose attendance you can record.</p>
+</section>
+<section class="panel assignment-panel" aria-label="Class assignment">
+  {% if assignment %}<p>Current class: <strong>{{ assignment.std }} · {{ assignment.divison }}</strong></p>{% endif %}
+  <form method="post" class="stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Standard<select name="standard" required>{% for number in range(1,11) %}<option value="{{ number }}" {% if assignment and assignment.std == number %}selected{% endif %}>{{ number }}</option>{% endfor %}</select></label>
+    <label>Division<select name="division" required>{% for item in ['A','B','C','D'] %}<option value="{{ item }}" {% if assignment and assignment.divison == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+    <button class="primary" type="submit">Save class</button>
+  </form>
+</section>
+{% endblock %}
