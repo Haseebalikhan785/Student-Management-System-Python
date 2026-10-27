@@ -11,26 +11,30 @@ import os
 import hashlib
 import hmac
 from threading import Lock
-from datetime import date
+from datetime import date, datetime, timedelta
 from functools import wraps
 
 import mysql.connector
-from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for, send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import check_password_hash
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__)
 secret_key = os.environ.get("SECRET_KEY")
 if not secret_key and os.environ.get("RENDER"):
     raise RuntimeError("Set a unique SECRET_KEY in the hosting dashboard before deploying.")
+UPLOAD_FOLDER = os.path.join(app.root_path, "static", "uploads", "assignments")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config.update(
     SECRET_KEY=secret_key or "local-development-only-change-before-hosting",
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "true" if os.environ.get("RENDER") else "false").lower() == "true",
     PERMANENT_SESSION_LIFETIME=60 * 60 * 8,
-    MAX_CONTENT_LENGTH=1 * 1024 * 1024,
+    MAX_CONTENT_LENGTH=16 * 1024 * 1024,
+    UPLOAD_FOLDER=UPLOAD_FOLDER,
 )
 csrf = CSRFProtect(app)
 _schema_ready = False
@@ -193,6 +197,98 @@ def db_connection():
         published BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY ix_announcement_audience (published, audience, created_at)
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS assignments (
+        assignment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        course_code VARCHAR(10) NOT NULL,
+        faculty_id VARCHAR(8) NOT NULL,
+        title VARCHAR(180) NOT NULL,
+        description TEXT NOT NULL,
+        due_date DATETIME NOT NULL,
+        max_marks DECIMAL(5,2) NOT NULL DEFAULT 100.00,
+        allowed_extensions VARCHAR(100) NOT NULL DEFAULT 'pdf,docx,zip,txt,py',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_assign_course FOREIGN KEY (course_code) REFERENCES courses(course_code)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_assign_faculty FOREIGN KEY (faculty_id) REFERENCES faculty(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS assignment_submissions (
+        submission_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        assignment_id BIGINT UNSIGNED NOT NULL,
+        student_id VARCHAR(8) NOT NULL,
+        file_path VARCHAR(255) NOT NULL,
+        original_filename VARCHAR(255) NOT NULL,
+        student_notes TEXT,
+        submitted_at DATETIME NOT NULL,
+        status ENUM('on_time', 'late') NOT NULL DEFAULT 'on_time',
+        marks_awarded DECIMAL(5,2) DEFAULT NULL,
+        feedback TEXT DEFAULT NULL,
+        graded_by VARCHAR(8) DEFAULT NULL,
+        graded_at DATETIME DEFAULT NULL,
+        UNIQUE KEY uq_assign_student (assignment_id, student_id),
+        CONSTRAINT fk_sub_assign FOREIGN KEY (assignment_id) REFERENCES assignments(assignment_id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_sub_student FOREIGN KEY (student_id) REFERENCES student(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS quizzes (
+        quiz_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        course_code VARCHAR(10) NOT NULL,
+        faculty_id VARCHAR(8) NOT NULL,
+        title VARCHAR(180) NOT NULL,
+        description TEXT NOT NULL,
+        duration_minutes INT NOT NULL DEFAULT 30,
+        passing_marks DECIMAL(5,2) NOT NULL DEFAULT 50.00,
+        due_date DATETIME NOT NULL,
+        published BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_quiz_course FOREIGN KEY (course_code) REFERENCES courses(course_code)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_quiz_faculty FOREIGN KEY (faculty_id) REFERENCES faculty(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS quiz_questions (
+        question_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        quiz_id BIGINT UNSIGNED NOT NULL,
+        question_text TEXT NOT NULL,
+        option_a VARCHAR(255) NOT NULL,
+        option_b VARCHAR(255) NOT NULL,
+        option_c VARCHAR(255) NOT NULL,
+        option_d VARCHAR(255) NOT NULL,
+        correct_option CHAR(1) NOT NULL,
+        marks DECIMAL(4,2) NOT NULL DEFAULT 1.00,
+        explanation TEXT DEFAULT NULL,
+        order_num INT NOT NULL DEFAULT 1,
+        CONSTRAINT fk_q_quiz FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS quiz_attempts (
+        attempt_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        quiz_id BIGINT UNSIGNED NOT NULL,
+        student_id VARCHAR(8) NOT NULL,
+        started_at DATETIME NOT NULL,
+        submitted_at DATETIME DEFAULT NULL,
+        total_score DECIMAL(5,2) DEFAULT 0.00,
+        max_possible_score DECIMAL(5,2) DEFAULT 0.00,
+        status ENUM('in_progress', 'completed') NOT NULL DEFAULT 'in_progress',
+        UNIQUE KEY uq_quiz_attempt (quiz_id, student_id),
+        CONSTRAINT fk_att_quiz FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_att_student FOREIGN KEY (student_id) REFERENCES student(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB""")
+                cursor.execute("""CREATE TABLE IF NOT EXISTS quiz_answers (
+        answer_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        attempt_id BIGINT UNSIGNED NOT NULL,
+        question_id BIGINT UNSIGNED NOT NULL,
+        selected_option CHAR(1) DEFAULT NULL,
+        is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+        marks_awarded DECIMAL(4,2) NOT NULL DEFAULT 0.00,
+        CONSTRAINT fk_ans_attempt FOREIGN KEY (attempt_id) REFERENCES quiz_attempts(attempt_id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_ans_question FOREIGN KEY (question_id) REFERENCES quiz_questions(question_id)
+            ON DELETE CASCADE ON UPDATE CASCADE
     ) ENGINE=InnoDB""")
                 cursor.executemany(
                     "INSERT IGNORE INTO departments (department_id, name, description) VALUES (%s,%s,%s)",
@@ -1567,6 +1663,608 @@ def mark_attendance():
         attendance_by_student=attendance_by_student, selected_date=selected_date,
         assignment=assignment,
     )
+
+
+# ==========================================
+# ASSIGNMENTS & HOMEWORK ENGINE
+# ==========================================
+
+@app.get("/student/assignments")
+@roles_required("student")
+def student_assignments_list():
+    academic_year, _ = academic_period()
+    student_id = current_user()["id"]
+    assignments = query(
+        "SELECT a.assignment_id, a.course_code, c.title AS course_title, a.title, a.description, "
+        "a.due_date, a.max_marks, a.allowed_extensions, "
+        "sub.submission_id, sub.submitted_at, sub.status AS sub_status, sub.marks_awarded, sub.feedback, "
+        "(a.due_date < NOW()) AS is_past_due "
+        "FROM assignments a "
+        "JOIN courses c ON a.course_code = c.course_code "
+        "JOIN course_enrollments ce ON a.course_code = ce.course_code "
+        "LEFT JOIN assignment_submissions sub ON a.assignment_id = sub.assignment_id AND sub.student_id = %s "
+        "WHERE ce.student_id = %s AND ce.status = 'approved' "
+        "ORDER BY a.due_date ASC",
+        (student_id, student_id)
+    )
+    return render_template("student_assignments.html", assignments=assignments, academic_year=academic_year)
+
+
+@app.route("/student/assignments/<int:assignment_id>/submit", methods=["GET", "POST"])
+@roles_required("student")
+def student_assignment_submit(assignment_id):
+    student_id = current_user()["id"]
+    assignment = query(
+        "SELECT a.*, c.title AS course_title "
+        "FROM assignments a "
+        "JOIN courses c ON a.course_code = c.course_code "
+        "JOIN course_enrollments ce ON a.course_code = ce.course_code "
+        "WHERE a.assignment_id = %s AND ce.student_id = %s AND ce.status = 'approved'",
+        (assignment_id, student_id),
+        one=True
+    )
+    if not assignment:
+        abort(404)
+
+    submission = query(
+        "SELECT * FROM assignment_submissions WHERE assignment_id = %s AND student_id = %s",
+        (assignment_id, student_id),
+        one=True
+    )
+
+    if request.method == "POST":
+        if "submission_file" not in request.files:
+            flash("Please choose a file to upload.", "error")
+            return redirect(request.url)
+        file = request.files["submission_file"]
+        if not file or file.filename == "":
+            flash("No file was selected.", "error")
+            return redirect(request.url)
+
+        filename = secure_filename(file.filename)
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        allowed = [x.strip().lower() for x in assignment["allowed_extensions"].split(",") if x.strip()]
+        if ext not in allowed:
+            flash(f"Invalid file extension '.{ext}'. Allowed types: {assignment['allowed_extensions']}", "error")
+            return redirect(request.url)
+
+        unique_name = f"assign_{assignment_id}_{student_id}_{int(datetime.now().timestamp())}.{ext}"
+        stored_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+        file.save(stored_path)
+
+        now = datetime.now()
+        sub_status = "late" if now > assignment["due_date"] else "on_time"
+        notes = request.form.get("student_notes", "").strip()
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO assignment_submissions (assignment_id, student_id, file_path, original_filename, student_notes, submitted_at, status) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), original_filename=VALUES(original_filename), student_notes=VALUES(student_notes), submitted_at=VALUES(submitted_at), status=VALUES(status)",
+                (assignment_id, student_id, unique_name, filename, notes, now, sub_status)
+            )
+            connection.commit()
+            flash("Assignment submitted successfully!", "success")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return redirect(url_for("student_assignments_list"))
+
+    return render_template("student_assignment_submit.html", assignment=assignment, submission=submission)
+
+
+@app.get("/faculty/assignments")
+@roles_required("faculty")
+def faculty_assignments_list():
+    academic_year, _ = academic_period()
+    faculty_id = current_user()["id"]
+    assignments = query(
+        "SELECT a.assignment_id, a.course_code, c.title AS course_title, a.title, a.description, "
+        "a.due_date, a.max_marks, "
+        "COUNT(DISTINCT sub.submission_id) AS submission_count, "
+        "COUNT(DISTINCT CASE WHEN sub.marks_awarded IS NOT NULL THEN sub.submission_id END) AS graded_count, "
+        "(SELECT COUNT(*) FROM course_enrollments ce WHERE ce.course_code = a.course_code AND ce.status = 'approved') AS enrolled_count "
+        "FROM assignments a "
+        "JOIN courses c ON a.course_code = c.course_code "
+        "LEFT JOIN assignment_submissions sub ON a.assignment_id = sub.assignment_id "
+        "WHERE a.faculty_id = %s "
+        "GROUP BY a.assignment_id, a.course_code, c.title, a.title, a.description, a.due_date, a.max_marks "
+        "ORDER BY a.created_at DESC",
+        (faculty_id,)
+    )
+    return render_template("faculty_assignments.html", assignments=assignments, academic_year=academic_year)
+
+
+@app.route("/faculty/assignments/new", methods=["GET", "POST"])
+@roles_required("faculty")
+def faculty_assignment_create():
+    academic_year, semester = academic_period()
+    faculty_id = current_user()["id"]
+    courses = query(
+        "SELECT fc.course_code, c.title "
+        "FROM faculty_courses fc "
+        "JOIN courses c ON fc.course_code = c.course_code "
+        "WHERE fc.faculty_id = %s AND fc.academic_year = %s AND fc.semester = %s",
+        (faculty_id, academic_year, semester)
+    )
+
+    if request.method == "POST":
+        course_code = request.form.get("course_code", "").strip()
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        due_date_raw = request.form.get("due_date", "").strip()
+        max_marks = float(request.form.get("max_marks", 100))
+        allowed_extensions = request.form.get("allowed_extensions", "pdf,docx,zip,txt,py").strip()
+
+        if not course_code or not title or not description or not due_date_raw:
+            flash("All required fields must be filled.", "error")
+            return redirect(request.url)
+
+        try:
+            due_date = datetime.strptime(due_date_raw, "%Y-%m-%dT%H:%M")
+        except ValueError:
+            flash("Invalid date format. Please use the calendar selector.", "error")
+            return redirect(request.url)
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO assignments (course_code, faculty_id, title, description, due_date, max_marks, allowed_extensions) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (course_code, faculty_id, title, description, due_date, max_marks, allowed_extensions)
+            )
+            connection.commit()
+            flash("Assignment published successfully!", "success")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return redirect(url_for("faculty_assignments_list"))
+
+    return render_template("faculty_assignment_form.html", courses=courses)
+
+
+@app.get("/faculty/assignments/<int:assignment_id>/submissions")
+@roles_required("faculty")
+def faculty_assignment_submissions(assignment_id):
+    faculty_id = current_user()["id"]
+    assignment = query(
+        "SELECT a.*, c.title AS course_title "
+        "FROM assignments a "
+        "JOIN courses c ON a.course_code = c.course_code "
+        "WHERE a.assignment_id = %s AND a.faculty_id = %s",
+        (assignment_id, faculty_id),
+        one=True
+    )
+    if not assignment:
+        abort(404)
+
+    submissions = query(
+        "SELECT s.id AS student_id, s.first_name, s.last_name, s.roll_no, "
+        "sub.submission_id, sub.original_filename, sub.submitted_at, sub.status, "
+        "sub.marks_awarded, sub.feedback, sub.student_notes "
+        "FROM course_enrollments ce "
+        "JOIN student s ON ce.student_id = s.id "
+        "LEFT JOIN assignment_submissions sub ON ce.student_id = sub.student_id AND sub.assignment_id = %s "
+        "WHERE ce.course_code = %s AND ce.status = 'approved' "
+        "ORDER BY s.roll_no ASC",
+        (assignment_id, assignment["course_code"])
+    )
+    return render_template("faculty_assignment_submissions.html", assignment=assignment, submissions=submissions)
+
+
+@app.post("/faculty/assignments/submissions/<int:submission_id>/grade")
+@roles_required("faculty")
+def faculty_grade_submission(submission_id):
+    faculty_id = current_user()["id"]
+    submission = query(
+        "SELECT sub.*, a.assignment_id, a.faculty_id "
+        "FROM assignment_submissions sub "
+        "JOIN assignments a ON sub.assignment_id = a.assignment_id "
+        "WHERE sub.submission_id = %s AND a.faculty_id = %s",
+        (submission_id, faculty_id),
+        one=True
+    )
+    if not submission:
+        abort(404)
+
+    marks = float(request.form.get("marks_awarded", 0))
+    feedback = request.form.get("feedback", "").strip()
+
+    connection = db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "UPDATE assignment_submissions "
+            "SET marks_awarded = %s, feedback = %s, graded_by = %s, graded_at = NOW() "
+            "WHERE submission_id = %s",
+            (marks, feedback, faculty_id, submission_id)
+        )
+        connection.commit()
+        flash("Grade and rubric feedback saved successfully.", "success")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return redirect(url_for("faculty_assignment_submissions", assignment_id=submission["assignment_id"]))
+
+
+@app.get("/assignments/submissions/<int:submission_id>/download")
+@login_required
+def download_assignment_submission(submission_id):
+    user = current_user()
+    submission = query(
+        "SELECT sub.*, a.course_code, a.faculty_id "
+        "FROM assignment_submissions sub "
+        "JOIN assignments a ON sub.assignment_id = a.assignment_id "
+        "WHERE sub.submission_id = %s",
+        (submission_id,),
+        one=True
+    )
+    if not submission:
+        abort(404)
+
+    if user["typeofuser"] == "student" and user["id"] != submission["student_id"]:
+        abort(403)
+    elif user["typeofuser"] == "faculty" and user["id"] != submission["faculty_id"]:
+        abort(403)
+
+    return send_from_directory(
+        app.config["UPLOAD_FOLDER"],
+        submission["file_path"],
+        as_attachment=True,
+        download_name=submission["original_filename"]
+    )
+
+
+# ==========================================
+# TIMED ONLINE QUIZZES & EXAMINATION ENGINE
+# ==========================================
+
+@app.get("/student/quizzes")
+@roles_required("student")
+def student_quizzes_list():
+    academic_year, _ = academic_period()
+    student_id = current_user()["id"]
+    quizzes = query(
+        "SELECT q.quiz_id, q.course_code, c.title AS course_title, q.title, q.description, "
+        "q.duration_minutes, q.passing_marks, q.due_date, "
+        "att.attempt_id, att.status AS attempt_status, att.total_score, att.max_possible_score, "
+        "(SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = q.quiz_id) AS question_count, "
+        "(q.due_date < NOW()) AS is_past_due "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "JOIN course_enrollments ce ON q.course_code = ce.course_code "
+        "LEFT JOIN quiz_attempts att ON q.quiz_id = att.quiz_id AND att.student_id = %s "
+        "WHERE ce.student_id = %s AND ce.status = 'approved' AND q.published = 1 "
+        "ORDER BY q.due_date ASC",
+        (student_id, student_id)
+    )
+    return render_template("student_quizzes.html", quizzes=quizzes, academic_year=academic_year)
+
+
+@app.route("/student/quizzes/<int:quiz_id>/take", methods=["GET", "POST"])
+@roles_required("student")
+def student_quiz_take(quiz_id):
+    student_id = current_user()["id"]
+    quiz = query(
+        "SELECT q.*, c.title AS course_title "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "JOIN course_enrollments ce ON q.course_code = ce.course_code "
+        "WHERE q.quiz_id = %s AND ce.student_id = %s AND ce.status = 'approved' AND q.published = 1",
+        (quiz_id, student_id),
+        one=True
+    )
+    if not quiz:
+        abort(404)
+
+    attempt = query(
+        "SELECT * FROM quiz_attempts WHERE quiz_id = %s AND student_id = %s",
+        (quiz_id, student_id),
+        one=True
+    )
+    if attempt and attempt["status"] == "completed":
+        return redirect(url_for("student_quiz_result", quiz_id=quiz_id))
+
+    now = datetime.now()
+    if not attempt:
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO quiz_attempts (quiz_id, student_id, started_at, status) VALUES (%s, %s, %s, 'in_progress')",
+                (quiz_id, student_id, now)
+            )
+            connection.commit()
+            attempt_id = cursor.lastrowid
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        started_at = now
+    else:
+        attempt_id = attempt["attempt_id"]
+        started_at = attempt["started_at"]
+
+    deadline = started_at + timedelta(minutes=quiz["duration_minutes"])
+    remaining_seconds = max(0, int((deadline - now).total_seconds()))
+
+    questions = query(
+        "SELECT question_id, question_text, option_a, option_b, option_c, option_d, marks, order_num "
+        "FROM quiz_questions WHERE quiz_id = %s ORDER BY order_num ASC",
+        (quiz_id,)
+    )
+
+    if request.method == "POST":
+        total_score = 0.0
+        max_possible = 0.0
+        answers_to_save = []
+
+        full_questions = query(
+            "SELECT question_id, correct_option, marks FROM quiz_questions WHERE quiz_id = %s",
+            (quiz_id,)
+        )
+        for q in full_questions:
+            qid = q["question_id"]
+            selected = request.form.get(f"question_{qid}", "").strip().upper()
+            is_correct = (selected == q["correct_option"])
+            awarded = float(q["marks"]) if is_correct else 0.0
+            total_score += awarded
+            max_possible += float(q["marks"])
+            answers_to_save.append((attempt_id, qid, selected if selected else None, is_correct, awarded))
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.executemany(
+                "INSERT INTO quiz_answers (attempt_id, question_id, selected_option, is_correct, marks_awarded) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                answers_to_save
+            )
+            cursor.execute(
+                "UPDATE quiz_attempts "
+                "SET submitted_at = NOW(), total_score = %s, max_possible_score = %s, status = 'completed' "
+                "WHERE attempt_id = %s",
+                (total_score, max_possible, attempt_id)
+            )
+            connection.commit()
+            flash("Assessment submitted and evaluated successfully!", "success")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+        return redirect(url_for("student_quiz_result", quiz_id=quiz_id))
+
+    return render_template(
+        "student_quiz_take.html",
+        quiz=quiz,
+        questions=questions,
+        remaining_seconds=remaining_seconds
+    )
+
+
+@app.get("/student/quizzes/<int:quiz_id>/result")
+@roles_required("student")
+def student_quiz_result(quiz_id):
+    student_id = current_user()["id"]
+    quiz = query(
+        "SELECT q.*, c.title AS course_title "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "WHERE q.quiz_id = %s",
+        (quiz_id,),
+        one=True
+    )
+    if not quiz:
+        abort(404)
+
+    attempt = query(
+        "SELECT * FROM quiz_attempts WHERE quiz_id = %s AND student_id = %s AND status = 'completed'",
+        (quiz_id, student_id),
+        one=True
+    )
+    if not attempt:
+        flash("You have not completed this assessment yet.", "error")
+        return redirect(url_for("student_quizzes_list"))
+
+    questions = query(
+        "SELECT qq.*, qa.selected_option, qa.is_correct, qa.marks_awarded "
+        "FROM quiz_questions qq "
+        "LEFT JOIN quiz_answers qa ON qq.question_id = qa.question_id AND qa.attempt_id = %s "
+        "WHERE qq.quiz_id = %s "
+        "ORDER BY qq.order_num ASC",
+        (attempt["attempt_id"], quiz_id)
+    )
+    return render_template("student_quiz_result.html", quiz=quiz, attempt=attempt, questions=questions)
+
+
+@app.get("/faculty/quizzes")
+@roles_required("faculty")
+def faculty_quizzes_list():
+    academic_year, _ = academic_period()
+    faculty_id = current_user()["id"]
+    quizzes = query(
+        "SELECT q.quiz_id, q.course_code, c.title AS course_title, q.title, q.description, "
+        "q.duration_minutes, q.passing_marks, q.due_date, "
+        "(SELECT COUNT(*) FROM quiz_questions qq WHERE qq.quiz_id = q.quiz_id) AS question_count, "
+        "(SELECT COUNT(*) FROM quiz_attempts qa WHERE qa.quiz_id = q.quiz_id AND qa.status = 'completed') AS attempt_count "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "WHERE q.faculty_id = %s "
+        "ORDER BY q.created_at DESC",
+        (faculty_id,)
+    )
+    return render_template("faculty_quizzes.html", quizzes=quizzes, academic_year=academic_year)
+
+
+@app.route("/faculty/quizzes/new", methods=["GET", "POST"])
+@roles_required("faculty")
+def faculty_quiz_create():
+    academic_year, semester = academic_period()
+    faculty_id = current_user()["id"]
+    courses = query(
+        "SELECT fc.course_code, c.title "
+        "FROM faculty_courses fc "
+        "JOIN courses c ON fc.course_code = c.course_code "
+        "WHERE fc.faculty_id = %s AND fc.academic_year = %s AND fc.semester = %s",
+        (faculty_id, academic_year, semester)
+    )
+
+    if request.method == "POST":
+        course_code = request.form.get("course_code", "").strip()
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        duration_minutes = int(request.form.get("duration_minutes", 30))
+        passing_marks = float(request.form.get("passing_marks", 50))
+        due_date_raw = request.form.get("due_date", "").strip()
+
+        if not course_code or not title or not due_date_raw:
+            flash("All required fields must be provided.", "error")
+            return redirect(request.url)
+
+        try:
+            due_date = datetime.strptime(due_date_raw, "%Y-%m-%dT%H:%M")
+        except ValueError:
+            flash("Invalid date format.", "error")
+            return redirect(request.url)
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO quizzes (course_code, faculty_id, title, description, duration_minutes, passing_marks, due_date) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (course_code, faculty_id, title, description, duration_minutes, passing_marks, due_date)
+            )
+            connection.commit()
+            quiz_id = cursor.lastrowid
+            flash("Quiz created successfully! Now add questions below.", "success")
+            return redirect(url_for("faculty_quiz_questions", quiz_id=quiz_id))
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+    return render_template("faculty_quiz_form.html", courses=courses)
+
+
+@app.route("/faculty/quizzes/<int:quiz_id>/questions", methods=["GET", "POST"])
+@roles_required("faculty")
+def faculty_quiz_questions(quiz_id):
+    faculty_id = current_user()["id"]
+    quiz = query(
+        "SELECT q.*, c.title AS course_title "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "WHERE q.quiz_id = %s AND q.faculty_id = %s",
+        (quiz_id, faculty_id),
+        one=True
+    )
+    if not quiz:
+        abort(404)
+
+    if request.method == "POST":
+        text = request.form.get("question_text", "").strip()
+        a = request.form.get("option_a", "").strip()
+        b = request.form.get("option_b", "").strip()
+        c = request.form.get("option_c", "").strip()
+        d = request.form.get("option_d", "").strip()
+        correct = request.form.get("correct_option", "").strip().upper()
+        marks = float(request.form.get("marks", 2.0))
+        explanation = request.form.get("explanation", "").strip()
+
+        if not text or not a or not b or not c or not d or correct not in ["A", "B", "C", "D"]:
+            flash("All question details and options must be provided.", "error")
+            return redirect(request.url)
+
+        order_row = query("SELECT COALESCE(MAX(order_num), 0) + 1 AS next_order FROM quiz_questions WHERE quiz_id = %s", (quiz_id,), one=True)
+        next_order = order_row["next_order"] if order_row else 1
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO quiz_questions (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation, order_num) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (quiz_id, text, a, b, c, d, correct, marks, explanation, next_order)
+            )
+            connection.commit()
+            flash("Question added successfully.", "success")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return redirect(request.url)
+
+    questions = query(
+        "SELECT * FROM quiz_questions WHERE quiz_id = %s ORDER BY order_num ASC",
+        (quiz_id,)
+    )
+    total_marks = sum(float(q["marks"]) for q in questions)
+    return render_template("faculty_quiz_questions.html", quiz=quiz, questions=questions, total_marks=total_marks)
+
+
+@app.post("/faculty/quizzes/<int:quiz_id>/questions/<int:question_id>/delete")
+@roles_required("faculty")
+def faculty_quiz_question_delete(quiz_id, question_id):
+    faculty_id = current_user()["id"]
+    quiz = query("SELECT quiz_id FROM quizzes WHERE quiz_id = %s AND faculty_id = %s", (quiz_id, faculty_id), one=True)
+    if not quiz:
+        abort(404)
+
+    connection = db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("DELETE FROM quiz_questions WHERE question_id = %s AND quiz_id = %s", (question_id, quiz_id))
+        connection.commit()
+        flash("Question deleted.", "success")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+    return redirect(url_for("faculty_quiz_questions", quiz_id=quiz_id))
+
+
+@app.get("/faculty/quizzes/<int:quiz_id>/attempts")
+@roles_required("faculty")
+def faculty_quiz_attempts(quiz_id):
+    faculty_id = current_user()["id"]
+    quiz = query(
+        "SELECT q.*, c.title AS course_title "
+        "FROM quizzes q "
+        "JOIN courses c ON q.course_code = c.course_code "
+        "WHERE q.quiz_id = %s AND q.faculty_id = %s",
+        (quiz_id, faculty_id),
+        one=True
+    )
+    if not quiz:
+        abort(404)
+
+    attempts = query(
+        "SELECT qa.*, s.first_name, s.last_name, s.roll_no "
+        "FROM quiz_attempts qa "
+        "JOIN student s ON qa.student_id = s.id "
+        "WHERE qa.quiz_id = %s "
+        "ORDER BY qa.submitted_at DESC",
+        (quiz_id,)
+    )
+    return render_template("faculty_quiz_attempts.html", quiz=quiz, attempts=attempts)
 
 
 @app.errorhandler(403)

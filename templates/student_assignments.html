@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Course Assignments · University Management{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Academic evaluations · {{ academic_year }}</p>
+    <h1>Course Assignments</h1>
+    <p class="muted">Review pending homework, submit projects, and check graded rubric feedback.</p>
+  </div>
+</div>
+
+{% if not assignments %}
+<div class="panel">
+  <p class="empty-message">No assignments have been assigned for your enrolled courses yet.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Assignment Title</th>
+          <th>Due Date</th>
+          <th>Max Marks</th>
+          <th>Status</th>
+          <th>Grade / Feedback</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td><strong>{{ a.course_code }}</strong><br><small class="muted">{{ a.course_title }}</small></td>
+          <td>
+            <strong>{{ a.title }}</strong>
+            <p class="muted" style="margin: 4px 0 0 0; font-size: 12px;">{{ a.description[:90] }}{% if a.description|length > 90 %}...{% endif %}</p>
+          </td>
+          <td>
+            {{ a.due_date.strftime('%b %d, %Y %I:%M %p') }}
+            {% if a.is_past_due and not a.submission_id %}
+              <br><small style="color: var(--error); font-weight: bold;">Past due</small>
+            {% endif %}
+          </td>
+          <td>{{ a.max_marks }}</td>
+          <td>
+            {% if a.marks_awarded is not none %}
+              <span class="status-pill approved">Graded</span>
+            {% elif a.submission_id %}
+              {% if a.sub_status == 'late' %}
+                <span class="status-pill pending">Submitted (Late)</span>
+              {% else %}
+                <span class="status-pill approved">Submitted</span>
+              {% endif %}
+            {% elif a.is_past_due %}
+              <span class="status-pill rejected">Missing</span>
+            {% else %}
+              <span class="status-pill pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if a.marks_awarded is not none %}
+              <strong style="color: var(--success); font-size: 14px;">{{ a.marks_awarded }} / {{ a.max_marks }}</strong>
+              {% if a.feedback %}
+                <br><small class="muted" title="{{ a.feedback }}">{{ a.feedback[:40] }}{% if a.feedback|length > 40 %}...{% endif %}</small>
+              {% endif %}
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a class="button small {% if a.submission_id %}secondary{% endif %}" href="{{ url_for('student_assignment_submit', assignment_id=a.assignment_id) }}">
+              {% if a.submission_id %}View Submission{% else %}Submit Work{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -48,12 +48,16 @@
         {% elif g.user.typeofuser == 'faculty' %}
           <a href="{{ url_for('records', record_type='students') }}" {% if request.endpoint == 'records' %}aria-current="page"{% endif %}>Students</a>
           <a href="{{ url_for('faculty_courses') }}" {% if request.endpoint in ['faculty_courses', 'faculty_course_attendance', 'faculty_course_grades'] %}aria-current="page"{% endif %}>My courses</a>
+          <a href="{{ url_for('faculty_assignments_list') }}" {% if 'assignment' in request.endpoint and request.endpoint != 'faculty_assignment' %}aria-current="page"{% endif %}>Assignments</a>
+          <a href="{{ url_for('faculty_quizzes_list') }}" {% if 'quiz' in request.endpoint %}aria-current="page"{% endif %}>Quizzes</a>
           <a href="{{ url_for('mark_attendance') }}" {% if request.endpoint == 'mark_attendance' %}aria-current="page"{% endif %}>Attendance</a>
           <a href="{{ url_for('faculty_assignment') }}" {% if request.endpoint == 'faculty_assignment' %}aria-current="page"{% endif %}>Year adviser</a>
           <a href="{{ url_for('schedule') }}" {% if request.endpoint == 'schedule' %}aria-current="page"{% endif %}>Timetable</a>
           <a href="{{ url_for('announcements') }}" {% if request.endpoint == 'announcements' %}aria-current="page"{% endif %}>Notices</a>
         {% else %}
           <a href="{{ url_for('student_courses') }}" {% if request.endpoint == 'student_courses' %}aria-current="page"{% endif %}>My courses</a>
+          <a href="{{ url_for('student_assignments_list') }}" {% if 'assignment' in request.endpoint %}aria-current="page"{% endif %}>Assignments</a>
+          <a href="{{ url_for('student_quizzes_list') }}" {% if 'quiz' in request.endpoint %}aria-current="page"{% endif %}>Quizzes</a>
           <a href="{{ url_for('student_transcript') }}" {% if request.endpoint == 'student_transcript' %}aria-current="page"{% endif %}>Results</a>
           <a href="{{ url_for('student_attendance') }}" {% if request.endpoint == 'student_attendance' %}aria-current="page"{% endif %}>Attendance</a>
           <a href="{{ url_for('student_fees') }}" {% if request.endpoint == 'student_fees' %}aria-current="page"{% endif %}>Fees</a>

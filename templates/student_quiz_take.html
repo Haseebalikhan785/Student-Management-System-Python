@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}{{ quiz.title }} · Online Exam{% endblock %}
+{% block content %}
+<div class="page-heading" style="position: sticky; top: 0; background: var(--bg); z-index: 100; padding: 14px 0; border-bottom: 2px solid var(--line);">
+  <div>
+    <p class="eyebrow">{{ quiz.course_code }} · {{ quiz.course_title }}</p>
+    <h1 style="font-size: 24px; margin: 4px 0;">{{ quiz.title }}</h1>
+  </div>
+  <div style="text-align: right;">
+    <div id="timer-box" style="display: inline-flex; align-items: center; gap: 8px; background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 8px 16px; font-weight: bold; color: #b91c1c; font-size: 18px;">
+      <span>⏱️ Time Remaining:</span>
+      <span id="countdown">--:--</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin: 20px 0; background: #fafaf9; border-left: 4px solid var(--line-dark);">
+  <p style="margin: 0; font-size: 14px;"><strong>Instructions:</strong> There are {{ questions|length }} question(s). You have {{ quiz.duration_minutes }} minutes to complete this assessment. When the timer expires, your answers will be automatically submitted.</p>
+</div>
+
+<form id="quiz-form" method="post" action="{{ url_for('student_quiz_take', quiz_id=quiz.quiz_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {% for q in questions %}
+  <div class="panel" style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px;">
+      <strong style="font-size: 16px;">Question {{ loop.index }} of {{ questions|length }}</strong>
+      <span class="status-pill" style="font-size: 12px;">{{ q.marks }} mark(s)</span>
+    </div>
+    
+    <p style="font-size: 16px; font-weight: 500; margin: 10px 0 16px 0;">{{ q.question_text }}</p>
+
+    <div style="display: grid; gap: 10px;">
+      <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: #fff;">
+        <input type="radio" name="question_{{ q.question_id }}" value="A" style="transform: scale(1.2);">
+        <span><strong>A)</strong> {{ q.option_a }}</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: #fff;">
+        <input type="radio" name="question_{{ q.question_id }}" value="B" style="transform: scale(1.2);">
+        <span><strong>B)</strong> {{ q.option_b }}</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: #fff;">
+        <input type="radio" name="question_{{ q.question_id }}" value="C" style="transform: scale(1.2);">
+        <span><strong>C)</strong> {{ q.option_c }}</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: #fff;">
+        <input type="radio" name="question_{{ q.question_id }}" value="D" style="transform: scale(1.2);">
+        <span><strong>D)</strong> {{ q.option_d }}</span>
+      </label>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="panel" style="text-align: center; padding: 24px;">
+    <button type="submit" id="submit-btn" style="font-size: 16px; padding: 12px 36px;" onclick="return confirm('Are you sure you want to finalize and submit your exam?');">
+      Submit Exam &amp; View Results
+    </button>
+  </div>
+</form>
+
+<script>
+  (function() {
+    var remainingSeconds = {{ remaining_seconds }};
+    var countdownEl = document.getElementById('countdown');
+    var timerBox = document.getElementById('timer-box');
+    var form = document.getElementById('quiz-form');
+    var submitted = false;
+
+    function updateTimer() {
+      if (remainingSeconds <= 0) {
+        countdownEl.innerText = "00:00 (Time Expired)";
+        if (!submitted) {
+          submitted = true;
+          alert("Time has expired! Submitting your exam now...");
+          form.submit();
+        }
+        return;
+      }
+      var minutes = Math.floor(remainingSeconds / 60);
+      var seconds = remainingSeconds % 60;
+      countdownEl.innerText = (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+      
+      if (remainingSeconds <= 180) {
+        timerBox.style.background = "#fee2e2";
+        timerBox.style.borderColor = "#dc2626";
+      }
+      remainingSeconds--;
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+
+    form.addEventListener('submit', function() {
+      submitted = true;
+    });
+  })();
+</script>
+{% endblock %}

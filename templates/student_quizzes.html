@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Quizzes &amp; Examinations · University Management{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Academic assessments · {{ academic_year }}</p>
+    <h1>Online Quizzes &amp; Examinations</h1>
+    <p class="muted">Complete continuous assessments, timed tests, and view immediate auto-graded results.</p>
+  </div>
+</div>
+
+{% if not quizzes %}
+<div class="panel">
+  <p class="empty-message">No active quizzes or tests are currently published for your enrolled courses.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Quiz / Test Title</th>
+          <th>Time Limit</th>
+          <th>Due Date</th>
+          <th>Questions</th>
+          <th>Status / Score</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quizzes %}
+        <tr>
+          <td><strong>{{ q.course_code }}</strong><br><small class="muted">{{ q.course_title }}</small></td>
+          <td>
+            <strong>{{ q.title }}</strong>
+            <p class="muted" style="margin: 4px 0 0 0; font-size: 12px;">{{ q.description[:85] }}{% if q.description|length > 85 %}...{% endif %}</p>
+          </td>
+          <td>⏱️ {{ q.duration_minutes }} minutes</td>
+          <td>{{ q.due_date.strftime('%b %d, %Y %I:%M %p') }}</td>
+          <td>{{ q.question_count }} question(s)</td>
+          <td>
+            {% if q.attempt_status == 'completed' %}
+              {% set pct = (q.total_score / q.max_possible_score * 100) if q.max_possible_score > 0 else 0 %}
+              <span class="status-pill {% if pct >= q.passing_marks %}approved{% else %}rejected{% endif %}">
+                {{ q.total_score }} / {{ q.max_possible_score }} ({{ "%.1f"|format(pct) }}%)
+              </span>
+            {% elif q.is_past_due %}
+              <span class="status-pill rejected">Expired</span>
+            {% else %}
+              <span class="status-pill pending">Ready to Take</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if q.attempt_status == 'completed' %}
+              <a class="button small secondary" href="{{ url_for('student_quiz_result', quiz_id=q.quiz_id) }}">View Result</a>
+            {% elif q.is_past_due %}
+              <span class="muted">Closed</span>
+            {% else %}
+              <a class="button small" href="{{ url_for('student_quiz_take', quiz_id=q.quiz_id) }}">Start Quiz</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

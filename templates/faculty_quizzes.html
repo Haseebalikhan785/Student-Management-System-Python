@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Manage Quizzes &amp; Exams · Faculty Portal{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Academic management · {{ academic_year }}</p>
+    <h1>Online Quizzes &amp; Tests</h1>
+    <p class="muted">Create timed assessments, configure MCQ questions with auto-grading, and view student attempt analytics.</p>
+  </div>
+  <a class="button" href="{{ url_for('faculty_quiz_create') }}">+ Create New Quiz</a>
+</div>
+
+{% if not quizzes %}
+<div class="panel">
+  <p class="empty-message">No quizzes created yet. Click "+ Create New Quiz" above to set up a continuous evaluation test.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Quiz Title</th>
+          <th>Duration</th>
+          <th>Due Date</th>
+          <th>Questions</th>
+          <th>Student Attempts</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quizzes %}
+        <tr>
+          <td><strong>{{ q.course_code }}</strong><br><small class="muted">{{ q.course_title }}</small></td>
+          <td>
+            <strong>{{ q.title }}</strong>
+            <p class="muted" style="margin: 4px 0 0 0; font-size: 12px;">{{ q.description[:80] }}{% if q.description|length > 80 %}...{% endif %}</p>
+          </td>
+          <td>⏱️ {{ q.duration_minutes }} mins</td>
+          <td>{{ q.due_date.strftime('%b %d, %Y %I:%M %p') }}</td>
+          <td>
+            <a href="{{ url_for('faculty_quiz_questions', quiz_id=q.quiz_id) }}" style="font-weight: bold; text-decoration: underline;">
+              {{ q.question_count }} Questions
+            </a>
+          </td>
+          <td>
+            <span class="status-pill approved">{{ q.attempt_count }} Attempt(s)</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <a class="button small secondary" href="{{ url_for('faculty_quiz_questions', quiz_id=q.quiz_id) }}">Edit Questions</a>
+              <a class="button small" href="{{ url_for('faculty_quiz_attempts', quiz_id=q.quiz_id) }}">View Results</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

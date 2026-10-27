@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Manage Questions · {{ quiz.title }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ quiz.course_code }} · {{ quiz.duration_minutes }} Mins · Due {{ quiz.due_date.strftime('%b %d, %Y') }}</p>
+    <h1>{{ quiz.title }} — Questions</h1>
+    <p class="muted">{{ questions|length }} question(s) configured · Total marks: {{ total_marks }}</p>
+  </div>
+  <div style="display: flex; gap: 8px;">
+    <a class="button secondary" href="{{ url_for('faculty_quizzes_list') }}">Back to quizzes</a>
+    <a class="button" href="{{ url_for('faculty_quiz_attempts', quiz_id=quiz.quiz_id) }}">View Student Attempts</a>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom: 28px;">
+  <h2>+ Add New Multiple-Choice Question</h2>
+  <form method="post" style="margin-top: 16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="wide">
+        <label for="question_text">Question Text *</label>
+        <textarea id="question_text" name="question_text" rows="3" placeholder="Enter clear, concise question prompt..." required></textarea>
+      </div>
+      <div>
+        <label for="option_a">Option A *</label>
+        <input type="text" id="option_a" name="option_a" required>
+      </div>
+      <div>
+        <label for="option_b">Option B *</label>
+        <input type="text" id="option_b" name="option_b" required>
+      </div>
+      <div>
+        <label for="option_c">Option C *</label>
+        <input type="text" id="option_c" name="option_c" required>
+      </div>
+      <div>
+        <label for="option_d">Option D *</label>
+        <input type="text" id="option_d" name="option_d" required>
+      </div>
+      <div>
+        <label for="correct_option">Correct Option *</label>
+        <select id="correct_option" name="correct_option" required>
+          <option value="">— Select Correct Answer —</option>
+          <option value="A">Option A</option>
+          <option value="B">Option B</option>
+          <option value="C">Option C</option>
+          <option value="D">Option D</option>
+        </select>
+      </div>
+      <div>
+        <label for="marks">Marks for this Question *</label>
+        <input type="number" id="marks" name="marks" step="0.5" min="0.5" max="50" value="2" required>
+      </div>
+      <div class="wide">
+        <label for="explanation">Explanation (Optional - shown to student after exam)</label>
+        <input type="text" id="explanation" name="explanation" placeholder="Why this option is correct...">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 18px;">
+      <button type="submit">Add Question to Quiz</button>
+    </div>
+  </form>
+</div>
+
+<h2>Current Question Bank ({{ questions|length }})</h2>
+{% if not questions %}
+<div class="panel">
+  <p class="empty-message">No questions added yet. Use the form above to add your first assessment question.</p>
+</div>
+{% else %}
+{% for q in questions %}
+<div class="panel" style="margin-bottom: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 8px;">
+    <strong>Question {{ loop.index }} ({{ q.marks }} mark{{ 's' if q.marks != 1 else '' }})</strong>
+    <form method="post" action="{{ url_for('faculty_quiz_question_delete', quiz_id=quiz.quiz_id, question_id=q.question_id) }}" style="margin: 0;" onsubmit="return confirm('Delete this question?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="button small secondary" type="submit" style="color: var(--error);">Delete Question</button>
+    </form>
+  </div>
+  <p style="font-size: 15px; font-weight: 500; margin: 12px 0;">{{ q.question_text }}</p>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+    <div style="padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; {% if q.correct_option == 'A' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      A) {{ q.option_a }} {% if q.correct_option == 'A' %}<span class="status-pill approved" style="float: right;">Correct</span>{% endif %}
+    </div>
+    <div style="padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; {% if q.correct_option == 'B' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      B) {{ q.option_b }} {% if q.correct_option == 'B' %}<span class="status-pill approved" style="float: right;">Correct</span>{% endif %}
+    </div>
+    <div style="padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; {% if q.correct_option == 'C' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      C) {{ q.option_c }} {% if q.correct_option == 'C' %}<span class="status-pill approved" style="float: right;">Correct</span>{% endif %}
+    </div>
+    <div style="padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; {% if q.correct_option == 'D' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      D) {{ q.option_d }} {% if q.correct_option == 'D' %}<span class="status-pill approved" style="float: right;">Correct</span>{% endif %}
+    </div>
+  </div>
+  {% if q.explanation %}
+  <p class="muted" style="margin: 10px 0 0 0; font-size: 12px;"><strong>Explanation:</strong> {{ q.explanation }}</p>
+  {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

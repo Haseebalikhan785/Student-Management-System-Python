@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Manage Course Assignments · Faculty Portal{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Academic management · {{ academic_year }}</p>
+    <h1>Course Assignments</h1>
+    <p class="muted">Create course assignments, monitor student submissions, and grade work with rubrics.</p>
+  </div>
+  <a class="button" href="{{ url_for('faculty_assignment_create') }}">+ Create New Assignment</a>
+</div>
+
+{% if not assignments %}
+<div class="panel">
+  <p class="empty-message">You have not created any course assignments yet. Click "+ Create New Assignment" above to assign coursework.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Assignment Title</th>
+          <th>Due Date</th>
+          <th>Max Marks</th>
+          <th>Submissions</th>
+          <th>Graded</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td><strong>{{ a.course_code }}</strong><br><small class="muted">{{ a.course_title }}</small></td>
+          <td>
+            <strong>{{ a.title }}</strong>
+            <p class="muted" style="margin: 4px 0 0 0; font-size: 12px;">{{ a.description[:80] }}{% if a.description|length > 80 %}...{% endif %}</p>
+          </td>
+          <td>{{ a.due_date.strftime('%b %d, %Y %I:%M %p') }}</td>
+          <td>{{ a.max_marks }}</td>
+          <td>
+            <strong>{{ a.submission_count }}</strong> / {{ a.enrolled_count }} enrolled
+          </td>
+          <td>
+            <span class="status-pill {% if a.graded_count == a.submission_count and a.submission_count > 0 %}approved{% else %}pending{% endif %}">
+              {{ a.graded_count }} / {{ a.submission_count }} Graded
+            </span>
+          </td>
+          <td>
+            <a class="button small" href="{{ url_for('faculty_assignment_submissions', assignment_id=a.assignment_id) }}">
+              Review &amp; Grade Submissions
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

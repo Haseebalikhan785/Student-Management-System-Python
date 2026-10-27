@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Submit Assignment · {{ assignment.title }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ assignment.course_code }} · {{ assignment.course_title }}</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="muted">Due: {{ assignment.due_date.strftime('%A, %B %d, %Y at %I:%M %p') }} · Max marks: {{ assignment.max_marks }}</p>
+  </div>
+  <a class="button secondary" href="{{ url_for('student_assignments_list') }}">Back to assignments</a>
+</div>
+
+<div class="panel" style="margin-bottom: 24px;">
+  <h2>Assignment Instructions</h2>
+  <div style="background: #f8f8f6; border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin: 14px 0; white-space: pre-line;">
+    {{ assignment.description }}
+  </div>
+  <p class="muted" style="font-size: 13px;">Allowed file formats: <strong>{{ assignment.allowed_extensions.upper() }}</strong> (Max file size: 16 MB)</p>
+</div>
+
+{% if submission %}
+<div class="panel" style="margin-bottom: 24px; border-left: 4px solid {% if submission.marks_awarded is not none %}var(--success){% else %}#e2d3aa{% endif %};">
+  <h2>Your Submission</h2>
+  <div class="profile-grid" style="margin-top: 14px;">
+    <div>
+      <span>Submitted At</span>
+      <strong>{{ submission.submitted_at.strftime('%b %d, %Y %I:%M %p') }}</strong>
+    </div>
+    <div>
+      <span>Submission Status</span>
+      <strong>
+        {% if submission.status == 'late' %}
+          <span class="status-pill pending">Late Submission</span>
+        {% else %}
+          <span class="status-pill approved">On Time</span>
+        {% endif %}
+      </strong>
+    </div>
+    <div>
+      <span>Attached File</span>
+      <strong>
+        <a class="button small secondary" href="{{ url_for('download_assignment_submission', submission_id=submission.submission_id) }}">
+          📄 Download {{ submission.original_filename }}
+        </a>
+      </strong>
+    </div>
+    <div>
+      <span>Grading Status</span>
+      <strong>
+        {% if submission.marks_awarded is not none %}
+          <span class="status-pill approved">{{ submission.marks_awarded }} / {{ assignment.max_marks }} Marks</span>
+        {% else %}
+          <span class="status-pill pending">Awaiting Faculty Review</span>
+        {% endif %}
+      </strong>
+    </div>
+  </div>
+
+  {% if submission.student_notes %}
+  <div style="margin-top: 16px;">
+    <span class="muted" style="font-size: 12px; font-weight: bold; text-transform: uppercase;">Your Submission Notes:</span>
+    <p style="margin: 4px 0 0 0; background: #fafafa; padding: 10px; border-radius: 4px; border: 1px solid var(--line);">{{ submission.student_notes }}</p>
+  </div>
+  {% endif %}
+
+  {% if submission.marks_awarded is not none %}
+  <div style="margin-top: 18px; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;">
+    <h3 style="color: #166534; margin: 0 0 8px 0;">Faculty Evaluation &amp; Rubric Feedback</h3>
+    <p style="margin: 0; color: #15803d; font-size: 15px;">{{ submission.feedback or 'Good work! Evaluated and approved.' }}</p>
+    <small class="muted" style="display: block; margin-top: 8px;">Graded on {{ submission.graded_at.strftime('%b %d, %Y') if submission.graded_at else 'recently' }} by course instructor.</small>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not submission or submission.marks_awarded is none %}
+<div class="panel">
+  <h2>{% if submission %}Resubmit Assignment File{% else %}Upload Your Submission{% endif %}</h2>
+  <form method="post" enctype="multipart/form-data" style="margin-top: 16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="wide">
+        <label for="submission_file">Select File to Upload *</label>
+        <input type="file" id="submission_file" name="submission_file" required style="padding: 10px; border: 1px dashed var(--line-dark); background: #fafafa; border-radius: 6px; width: 100%;">
+        <small class="muted">Accepted formats: {{ assignment.allowed_extensions }}. Max size: 16 MB.</small>
+      </div>
+      <div class="wide">
+        <label for="student_notes">Student Comments or Submission Notes (Optional)</label>
+        <textarea id="student_notes" name="student_notes" rows="4" placeholder="Add any explanatory remarks or comments for the instructor...">{{ submission.student_notes if submission else '' }}</textarea>
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 20px;">
+      <button type="submit">{% if submission %}Upload Revised Submission{% else %}Submit Assignment{% endif %}</button>
+      <a class="button secondary" href="{{ url_for('student_assignments_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

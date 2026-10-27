@@ -20,6 +20,8 @@
 <div class="section-heading"><div><p class="eyebrow">Faculty services</p><h2>Teaching tools</h2></div></div>
 <section class="cards quick-actions" aria-label="Faculty services">
   <a class="stat-card" href="{{ url_for('faculty_courses') }}"><span>My courses</span><small>View current course assignments and enrolment counts.</small></a>
+  <a class="stat-card" href="{{ url_for('faculty_assignments_list') }}"><span>Assignments</span><small>Publish homework tasks and grade student submissions.</small></a>
+  <a class="stat-card" href="{{ url_for('faculty_quizzes_list') }}"><span>Quizzes &amp; Tests</span><small>Create timed online tests and view auto-graded attempts.</small></a>
   <a class="stat-card" href="{{ url_for('records', record_type='students') }}"><span>Student directory</span><small>Find student records available to faculty.</small></a>
   <a class="stat-card" href="{{ url_for('mark_attendance') }}"><span>Daily attendance</span><small>Record attendance for your assigned class.</small></a>
   <a class="stat-card" href="{{ url_for('faculty_assignment') }}"><span>Year adviser</span><small>{% if assignment %}Review your class assignment.{% else %}Set your year adviser assignment.{% endif %}</small></a>

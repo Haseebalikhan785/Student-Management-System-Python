@@ -25,6 +25,8 @@
 <div class="section-heading"><div><p class="eyebrow">Student services</p><h2>Academic services</h2></div></div>
 <section class="cards quick-actions" aria-label="Student services">
   <a class="stat-card" href="{{ url_for('student_courses') }}"><span>Courses</span><small>Browse this semester’s courses and request registration.</small></a>
+  <a class="stat-card" href="{{ url_for('student_assignments_list') }}"><span>Assignments</span><small>Submit homework, project files, and check grades.</small></a>
+  <a class="stat-card" href="{{ url_for('student_quizzes_list') }}"><span>Quizzes &amp; Tests</span><small>Take timed online assessments with instant scoring.</small></a>
   <a class="stat-card" href="{{ url_for('student_transcript') }}"><span>Transcript</span><small>Review grades, credits, and course attendance.</small></a>
   <a class="stat-card" href="{{ url_for('student_attendance') }}"><span>Daily attendance</span><small>Check your monthly attendance history.</small></a>
   <a class="stat-card" href="{{ url_for('student_fees') }}"><span>Fees</span><small>View fee plans and payments recorded for your account.</small></a>

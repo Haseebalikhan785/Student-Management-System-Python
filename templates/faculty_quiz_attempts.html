@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Attempts · {{ quiz.title }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ quiz.course_code }} · Passing: {{ quiz.passing_marks }}%</p>
+    <h1>{{ quiz.title }} — Student Attempts</h1>
+    <p class="muted">Review student scores, timestamps, and pass/fail evaluations.</p>
+  </div>
+  <div style="display: flex; gap: 8px;">
+    <a class="button secondary" href="{{ url_for('faculty_quizzes_list') }}">Back to quizzes</a>
+    <a class="button" href="{{ url_for('faculty_quiz_questions', quiz_id=quiz.quiz_id) }}">Manage Questions</a>
+  </div>
+</div>
+
+{% if not attempts %}
+<div class="panel">
+  <p class="empty-message">No students have completed this quiz yet.</p>
+</div>
+{% else %}
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Roll No</th>
+          <th>Student Name</th>
+          <th>Started At</th>
+          <th>Completed At</th>
+          <th>Score Obtained</th>
+          <th>Percentage</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in attempts %}
+        {% set pct = (a.total_score / a.max_possible_score * 100) if a.max_possible_score > 0 else 0 %}
+        <tr>
+          <td><strong>{{ a.roll_no }}</strong></td>
+          <td>
+            <strong>{{ a.first_name }} {{ a.last_name }}</strong><br>
+            <small class="muted">{{ a.student_id }}</small>
+          </td>
+          <td>{{ a.started_at.strftime('%b %d, %I:%M %p') }}</td>
+          <td>{{ a.submitted_at.strftime('%b %d, %I:%M %p') if a.submitted_at else 'In progress' }}</td>
+          <td><strong>{{ a.total_score }} / {{ a.max_possible_score }}</strong></td>
+          <td>{{ "%.1f"|format(pct) }}%</td>
+          <td>
+            {% if pct >= quiz.passing_marks %}
+              <span class="status-pill approved">Passed</span>
+            {% else %}
+              <span class="status-pill rejected">Failed</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

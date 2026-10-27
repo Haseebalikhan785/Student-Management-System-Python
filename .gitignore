@@ -4,3 +4,5 @@ __pycache__/
 .env
 .env.*
 !.env.example
+static/uploads/assignments/*
+!static/uploads/assignments/.gitkeep

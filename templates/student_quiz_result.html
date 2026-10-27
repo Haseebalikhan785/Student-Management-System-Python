@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Quiz Results · {{ quiz.title }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ quiz.course_code }} · {{ quiz.course_title }}</p>
+    <h1>{{ quiz.title }} — Results</h1>
+    <p class="muted">Completed on {{ attempt.submitted_at.strftime('%A, %B %d, %Y at %I:%M %p') }}</p>
+  </div>
+  <a class="button secondary" href="{{ url_for('student_quizzes_list') }}">Back to quizzes</a>
+</div>
+
+{% set pct = (attempt.total_score / attempt.max_possible_score * 100) if attempt.max_possible_score > 0 else 0 %}
+<div class="panel" style="margin-bottom: 24px; border-left: 6px solid {% if pct >= quiz.passing_marks %}var(--success){% else %}var(--error){% endif %};">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <span class="eyebrow" style="margin-bottom: 4px;">Examination Summary</span>
+      <h2 style="margin: 0; font-size: 28px;">
+        {{ attempt.total_score }} / {{ attempt.max_possible_score }} Marks
+        <span style="font-size: 20px; font-weight: normal; color: var(--muted);">({{ "%.1f"|format(pct) }}%)</span>
+      </h2>
+    </div>
+    <div>
+      {% if pct >= quiz.passing_marks %}
+        <span class="status-pill approved" style="font-size: 16px; padding: 8px 16px;">🎉 PASSED (Passing mark: {{ quiz.passing_marks }}%)</span>
+      {% else %}
+        <span class="status-pill rejected" style="font-size: 16px; padding: 8px 16px;">FAIL (Passing mark: {{ quiz.passing_marks }}%)</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<h2 style="margin: 28px 0 16px 0;">Detailed Question Evaluation</h2>
+
+{% for q in questions %}
+<div class="panel" style="margin-bottom: 18px; border-left: 4px solid {% if q.is_correct %}#22c55e{% else %}#ef4444{% endif %};">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <strong>Question {{ loop.index }} of {{ questions|length }}</strong>
+    <div>
+      {% if q.is_correct %}
+        <span class="status-pill approved">+{{ q.marks_awarded }} / {{ q.marks }} mark(s)</span>
+      {% else %}
+        <span class="status-pill rejected">0 / {{ q.marks }} mark(s)</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <p style="font-size: 16px; font-weight: 500; margin: 10px 0 14px 0;">{{ q.question_text }}</p>
+
+  <div style="display: grid; gap: 8px; margin-bottom: 12px;">
+    <div style="padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line); {% if q.selected_option == 'A' and q.is_correct %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% elif q.selected_option == 'A' and not q.is_correct %}background: #fef2f2; border-color: #fca5a5; font-weight: bold;{% elif q.correct_option == 'A' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      <strong>A)</strong> {{ q.option_a }}
+      {% if q.selected_option == 'A' %}<span class="status-pill" style="margin-left: 8px;">Your Answer</span>{% endif %}
+      {% if q.correct_option == 'A' %}<span class="status-pill approved" style="margin-left: 8px;">Correct Answer</span>{% endif %}
+    </div>
+    <div style="padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line); {% if q.selected_option == 'B' and q.is_correct %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% elif q.selected_option == 'B' and not q.is_correct %}background: #fef2f2; border-color: #fca5a5; font-weight: bold;{% elif q.correct_option == 'B' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      <strong>B)</strong> {{ q.option_b }}
+      {% if q.selected_option == 'B' %}<span class="status-pill" style="margin-left: 8px;">Your Answer</span>{% endif %}
+      {% if q.correct_option == 'B' %}<span class="status-pill approved" style="margin-left: 8px;">Correct Answer</span>{% endif %}
+    </div>
+    <div style="padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line); {% if q.selected_option == 'C' and q.is_correct %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% elif q.selected_option == 'C' and not q.is_correct %}background: #fef2f2; border-color: #fca5a5; font-weight: bold;{% elif q.correct_option == 'C' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      <strong>C)</strong> {{ q.option_c }}
+      {% if q.selected_option == 'C' %}<span class="status-pill" style="margin-left: 8px;">Your Answer</span>{% endif %}
+      {% if q.correct_option == 'C' %}<span class="status-pill approved" style="margin-left: 8px;">Correct Answer</span>{% endif %}
+    </div>
+    <div style="padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line); {% if q.selected_option == 'D' and q.is_correct %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% elif q.selected_option == 'D' and not q.is_correct %}background: #fef2f2; border-color: #fca5a5; font-weight: bold;{% elif q.correct_option == 'D' %}background: #f0fdf4; border-color: #86efac; font-weight: bold;{% endif %}">
+      <strong>D)</strong> {{ q.option_d }}
+      {% if q.selected_option == 'D' %}<span class="status-pill" style="margin-left: 8px;">Your Answer</span>{% endif %}
+      {% if q.correct_option == 'D' %}<span class="status-pill approved" style="margin-left: 8px;">Correct Answer</span>{% endif %}
+    </div>
+  </div>
+
+  {% if q.explanation %}
+  <div style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+    <strong style="color: #475569; font-size: 13px;">Explanation:</strong>
+    <p style="margin: 4px 0 0 0; color: #334155; font-size: 14px;">{{ q.explanation }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

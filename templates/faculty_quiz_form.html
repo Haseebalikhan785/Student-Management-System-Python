@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Create Online Quiz · Faculty Portal{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Assessment creation</p>
+    <h1>Create Online Quiz / Examination</h1>
+    <p class="muted">Set up time limits, passing requirements, and assessment parameters.</p>
+  </div>
+  <a class="button secondary" href="{{ url_for('faculty_quizzes_list') }}">Back to quizzes</a>
+</div>
+
+<div class="panel">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div>
+        <label for="course_code">Select Course *</label>
+        <select id="course_code" name="course_code" required>
+          <option value="">— Choose Assigned Course —</option>
+          {% for c in courses %}
+            <option value="{{ c.course_code }}">{{ c.course_code }} · {{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="duration_minutes">Time Limit (Minutes) *</label>
+        <input type="number" id="duration_minutes" name="duration_minutes" min="1" max="300" value="30" required>
+        <small class="muted">Exam will auto-submit after this time limit.</small>
+      </div>
+      <div class="wide">
+        <label for="title">Quiz / Assessment Title *</label>
+        <input type="text" id="title" name="title" placeholder="e.g., Mid-Term Assessment: Algorithms &amp; Complexity" required maxlength="180">
+      </div>
+      <div class="wide">
+        <label for="description">Instructions for Students *</label>
+        <textarea id="description" name="description" rows="4" placeholder="Mention syllabus coverage, question types, grading criteria..." required></textarea>
+      </div>
+      <div>
+        <label for="passing_marks">Passing Percentage (%) *</label>
+        <input type="number" id="passing_marks" name="passing_marks" min="0" max="100" value="50" required>
+      </div>
+      <div>
+        <label for="due_date">Due Date &amp; Expiry *</label>
+        <input type="datetime-local" id="due_date" name="due_date" required>
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 24px;">
+      <button type="submit">Create Quiz &amp; Proceed to Add Questions</button>
+      <a class="button secondary" href="{{ url_for('faculty_quizzes_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

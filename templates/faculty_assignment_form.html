@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Create Course Assignment · Faculty Portal{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Course coursework</p>
+    <h1>Create New Assignment</h1>
+    <p class="muted">Publish homework, lab tasks, or essays for your enrolled students.</p>
+  </div>
+  <a class="button secondary" href="{{ url_for('faculty_assignments_list') }}">Back to assignments</a>
+</div>
+
+<div class="panel">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div>
+        <label for="course_code">Select Course *</label>
+        <select id="course_code" name="course_code" required>
+          <option value="">— Choose Assigned Course —</option>
+          {% for c in courses %}
+            <option value="{{ c.course_code }}">{{ c.course_code }} · {{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="max_marks">Maximum Marks *</label>
+        <input type="number" id="max_marks" name="max_marks" step="0.5" min="1" max="1000" value="100" required>
+      </div>
+      <div class="wide">
+        <label for="title">Assignment Title *</label>
+        <input type="text" id="title" name="title" placeholder="e.g., Problem Set 2: Binary Search Trees" required maxlength="180">
+      </div>
+      <div class="wide">
+        <label for="description">Instructions &amp; Requirements *</label>
+        <textarea id="description" name="description" rows="5" placeholder="Specify instructions, rubric requirements, deliverable expectations..." required></textarea>
+      </div>
+      <div>
+        <label for="due_date">Due Date &amp; Time *</label>
+        <input type="datetime-local" id="due_date" name="due_date" required>
+      </div>
+      <div>
+        <label for="allowed_extensions">Allowed File Extensions *</label>
+        <input type="text" id="allowed_extensions" name="allowed_extensions" value="pdf,docx,zip,txt,py" required placeholder="comma separated, e.g. pdf,docx,zip">
+        <small class="muted">Students can only upload files with these extensions.</small>
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 24px;">
+      <button type="submit">Publish Assignment</button>
+      <a class="button secondary" href="{{ url_for('faculty_assignments_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

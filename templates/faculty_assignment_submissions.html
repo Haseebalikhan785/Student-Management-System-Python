@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Submissions · {{ assignment.title }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">{{ assignment.course_code }} · Due {{ assignment.due_date.strftime('%b %d, %Y %I:%M %p') }}</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="muted">Max marks: {{ assignment.max_marks }} · {{ submissions|length }} student(s) enrolled</p>
+  </div>
+  <a class="button secondary" href="{{ url_for('faculty_assignments_list') }}">Back to assignments</a>
+</div>
+
+<div class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Roll No</th>
+          <th>Student Name</th>
+          <th>Submission Status</th>
+          <th>Submitted File</th>
+          <th>Marks / {{ assignment.max_marks }}</th>
+          <th>Evaluation &amp; Rubric Feedback</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in submissions %}
+        <tr>
+          <td><strong>{{ s.roll_no }}</strong></td>
+          <td>
+            <strong>{{ s.first_name }} {{ s.last_name }}</strong><br>
+            <small class="muted">{{ s.student_id }}</small>
+          </td>
+          <td>
+            {% if s.submission_id %}
+              {% if s.status == 'late' %}
+                <span class="status-pill pending">Submitted (Late)</span>
+              {% else %}
+                <span class="status-pill approved">Submitted (On Time)</span>
+              {% endif %}
+              <br><small class="muted">{{ s.submitted_at.strftime('%b %d, %I:%M %p') }}</small>
+            {% else %}
+              <span class="status-pill rejected">Not Submitted</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.submission_id %}
+              <a class="button small secondary" href="{{ url_for('download_assignment_submission', submission_id=s.submission_id) }}">
+                📥 {{ s.original_filename }}
+              </a>
+              {% if s.student_notes %}
+                <p class="muted" style="margin: 4px 0 0 0; font-size: 11px;"><em>Note: {{ s.student_notes }}</em></p>
+              {% endif %}
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          {% if s.submission_id %}
+          <form method="post" action="{{ url_for('faculty_grade_submission', submission_id=s.submission_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <td style="min-width: 110px;">
+              <input type="number" name="marks_awarded" step="0.5" min="0" max="{{ assignment.max_marks }}" value="{{ s.marks_awarded if s.marks_awarded is not none else '' }}" required style="width: 90px; padding: 6px;">
+            </td>
+            <td style="min-width: 240px;">
+              <input type="text" name="feedback" value="{{ s.feedback or '' }}" placeholder="Rubric remarks &amp; feedback..." style="width: 100%; padding: 6px;">
+            </td>
+            <td>
+              <button class="button small" type="submit">{% if s.marks_awarded is not none %}Update Grade{% else %}Save Grade{% endif %}</button>
+            </td>
+          </form>
+          {% else %}
+          <td><span class="muted">—</span></td>
+          <td><span class="muted">—</span></td>
+          <td><span class="muted">—</span></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
