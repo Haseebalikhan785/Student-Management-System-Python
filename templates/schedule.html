@@ -1,7 +1,121 @@
 {% extends 'base.html' %}
 {% block title %}Timetable · University Management{% endblock %}
 {% block content %}
-<section class="page-intro"><p class="eyebrow">Academic timetable · {{ academic_year }} · Semester {{ semester }}</p><h1>{% if g.user.typeofuser == 'faculty' %}Teaching timetable{% elif g.user.typeofuser == 'student' %}My class timetable{% else %}University timetable{% endif %}</h1><p class="muted">Current-term course meetings, teaching staff, and assigned rooms.</p></section>
-{% set day_names = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
-<section class="schedule-grid">{% for day in range(7) %}{% set day_rows = rows|selectattr('weekday','equalto',day)|list %}{% if day_rows %}<section class="panel schedule-day"><h2>{{ day_names[day] }}</h2>{% for item in day_rows %}<article class="schedule-entry"><time>{{ item.starts_at }}–{{ item.ends_at }}</time><strong>{{ item.course_code }} · {{ item.title }}</strong><span>{{ item.room }}{% if g.user.typeofuser != 'faculty' %} · {{ item.faculty_name }}{% endif %}</span></article>{% endfor %}</section>{% endif %}{% endfor %}{% if not rows %}<article class="panel empty">No classes have been scheduled for your current courses this semester.</article>{% endif %}</section>
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">Academic timetable · {{ academic_year }} · Semester {{ semester }}</p>
+    <h1>{% if g.user.typeofuser == 'faculty' %}Teaching Timetable{% elif g.user.typeofuser == 'student' %}My Class Schedule{% else %}University Master Timetable{% endif %}</h1>
+    <p class="muted">Weekly course lectures, assigned lecture halls, and teaching faculty.</p>
+  </div>
+  {% if can_manage %}
+    <a class="button" href="#add-slot">+ Schedule New Class</a>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<div id="add-slot" class="panel" style="margin-bottom: 28px; background: #fafaf9; border-left: 4px solid var(--line-dark);">
+  <h2>+ Schedule a Course Class Slot</h2>
+  <form method="post" action="{{ url_for('schedule') }}" style="margin-top: 16px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div>
+        <label for="course_code">Course *</label>
+        <select id="course_code" name="course_code" required>
+          <option value="">— Select Course —</option>
+          {% for c in courses %}
+            <option value="{{ c.course_code }}">{{ c.course_code }} · {{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="faculty_id">Faculty Instructor *</label>
+        <select id="faculty_id" name="faculty_id" required>
+          <option value="">— Select Instructor —</option>
+          {% for f in faculty_list %}
+            <option value="{{ f.id }}">{{ f.name }} ({{ f.id }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="weekday">Day of Week *</label>
+        <select id="weekday" name="weekday" required>
+          <option value="0">Monday</option>
+          <option value="1">Tuesday</option>
+          <option value="2">Wednesday</option>
+          <option value="3">Thursday</option>
+          <option value="4">Friday</option>
+          <option value="5">Saturday</option>
+        </select>
+      </div>
+      <div>
+        <label for="room">Lecture Hall / Lab *</label>
+        <input type="text" id="room" name="room" placeholder="e.g. Turing Hall 101, Lab Computing 2" required maxlength="32">
+      </div>
+      <div>
+        <label for="starts_at">Start Time *</label>
+        <input type="time" id="starts_at" name="starts_at" required>
+      </div>
+      <div>
+        <label for="ends_at">End Time *</label>
+        <input type="time" id="ends_at" name="ends_at" required>
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 20px;">
+      <button type="submit">Save Class Slot</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% set day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+{% if not rows %}
+  <div class="panel">
+    <p class="empty-message">No classes are scheduled for your courses in Semester {{ semester }}.</p>
+  </div>
+{% else %}
+  <div style="display: grid; gap: 20px;">
+    {% for day in range(7) %}
+      {% set day_rows = rows|selectattr('weekday', 'equalto', day)|list %}
+      {% if day_rows %}
+      <div class="panel" style="padding: 20px;">
+        <h2 style="margin: 0 0 16px 0; border-bottom: 2px solid var(--line); padding-bottom: 8px; color: var(--ink);">
+          📅 {{ day_names[day] }}
+          <span class="status-pill" style="margin-left: 10px; font-size: 12px; font-weight: normal;">{{ day_rows|length }} lecture{{ 's' if day_rows|length != 1 else '' }}</span>
+        </h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px;">
+          {% for item in day_rows %}
+          <div style="background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <span class="status-pill approved" style="font-size: 11px;">⏱️ {{ item.formatted_time }}</span>
+                <span style="font-size: 12px; font-weight: bold; color: var(--muted);">{{ item.credits }} Credits</span>
+              </div>
+              <h3 style="margin: 6px 0 4px 0; font-size: 16px; color: var(--ink);">{{ item.course_code }} · {{ item.title }}</h3>
+              <p style="margin: 4px 0; font-size: 13px; color: var(--ink-soft);">
+                🏛️ <strong>{{ item.room }}</strong>
+              </p>
+              {% if g.user.typeofuser != 'faculty' %}
+              <p style="margin: 2px 0 0 0; font-size: 13px; color: var(--muted);">
+                👤 {{ item.faculty_name }}
+              </p>
+              {% endif %}
+            </div>
+
+            {% if can_manage %}
+            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); text-align: right;">
+              <form method="post" action="{{ url_for('schedule_delete', schedule_id=item.schedule_id) }}" style="margin: 0;" onsubmit="return confirm('Remove this class slot?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button small secondary" style="color: var(--error); border-color: #fca5a5; padding: 3px 10px; font-size: 12px;">Delete Slot</button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
 {% endblock %}

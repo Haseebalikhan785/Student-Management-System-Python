@@ -184,6 +184,7 @@ def db_connection():
         ends_at TIME NOT NULL,
         room VARCHAR(32) NOT NULL,
         KEY ix_schedule_term (academic_year, semester, weekday, starts_at),
+        UNIQUE KEY uq_schedule_slot (faculty_id, course_code, academic_year, semester, weekday, starts_at),
         CONSTRAINT fk_schedule_assignment FOREIGN KEY (faculty_id, course_code, academic_year, semester)
             REFERENCES faculty_courses(faculty_id, course_code, academic_year, semester)
             ON DELETE CASCADE ON UPDATE CASCADE
@@ -332,17 +333,19 @@ def db_connection():
                             ("FT10003", "BUS101", "2026-27", 1),
                         ],
                     )
-                    cursor.executemany(
-                        "INSERT IGNORE INTO course_schedule (faculty_id, course_code, academic_year, semester, weekday, starts_at, ends_at, room) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-                        [
-                            ("FT10000", "CSE101", "2026-27", 1, 0, "09:00:00", "10:30:00", "Turing Hall 101"),
-                            ("FT10001", "MAT101", "2026-27", 1, 0, "11:00:00", "12:30:00", "Ramanujan 204"),
-                            ("FT10000", "HUM101", "2026-27", 1, 1, "10:00:00", "11:30:00", "Aristotle 102"),
-                            ("FT10000", "CSE101", "2026-27", 1, 2, "09:00:00", "10:30:00", "Lab Computing 3"),
-                            ("FT10001", "CSE102", "2026-27", 1, 3, "14:00:00", "15:30:00", "Lovelace 105"),
-                            ("FT10001", "MAT101", "2026-27", 1, 4, "10:00:00", "11:30:00", "Ramanujan 204"),
-                        ],
-                    )
+                    cursor.execute("SELECT COUNT(*) FROM course_schedule")
+                    if cursor.fetchone()[0] == 0:
+                        cursor.executemany(
+                            "INSERT IGNORE INTO course_schedule (faculty_id, course_code, academic_year, semester, weekday, starts_at, ends_at, room) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                            [
+                                ("FT10000", "CSE101", "2026-27", 1, 0, "09:00:00", "10:30:00", "Turing Hall 101"),
+                                ("FT10001", "MAT101", "2026-27", 1, 0, "11:00:00", "12:30:00", "Ramanujan 204"),
+                                ("FT10000", "HUM101", "2026-27", 1, 1, "10:00:00", "11:30:00", "Aristotle 102"),
+                                ("FT10000", "CSE101", "2026-27", 1, 2, "09:00:00", "10:30:00", "Lab Computing 3"),
+                                ("FT10001", "CSE102", "2026-27", 1, 3, "14:00:00", "15:30:00", "Lovelace 105"),
+                                ("FT10001", "MAT101", "2026-27", 1, 4, "10:00:00", "11:30:00", "Ramanujan 204"),
+                            ],
+                        )
 
                 # Seed sample student enrollments, grades, and course attendance
                 cursor.execute("SELECT id FROM student WHERE id='ST10000'")
@@ -1224,26 +1227,113 @@ def student_transcript():
     )
 
 
-@app.get("/schedule")
+def format_time_delta(td):
+    if isinstance(td, timedelta):
+        total_seconds = int(td.total_seconds())
+        hours = total_seconds // 3600
+        mins = (total_seconds % 3600) // 60
+        ampm = "AM" if hours < 12 else "PM"
+        hour12 = hours % 12 or 12
+        return f"{hour12:02d}:{mins:02d} {ampm}"
+    elif isinstance(td, str):
+        try:
+            parts = [int(p) for p in td.split(":")[:2]]
+            ampm = "AM" if parts[0] < 12 else "PM"
+            hour12 = parts[0] % 12 or 12
+            return f"{hour12:02d}:{parts[1]:02d} {ampm}"
+        except Exception:
+            return td
+    return str(td)
+
+
+@app.route("/schedule", methods=["GET", "POST"])
 @login_required
 def schedule():
     user = current_user()
     academic_year, semester = academic_period()
+    can_manage = user["typeofuser"] in {"admin", "superadmin"}
+
+    if request.method == "POST":
+        if not can_manage:
+            abort(403)
+        course_code = request.form.get("course_code", "").strip()
+        faculty_id = request.form.get("faculty_id", "").strip()
+        weekday = int(request.form.get("weekday", 0))
+        starts_at = request.form.get("starts_at", "").strip()
+        ends_at = request.form.get("ends_at", "").strip()
+        room = request.form.get("room", "").strip()
+
+        if not course_code or not faculty_id or not starts_at or not ends_at or not room:
+            flash("All schedule fields are required.", "error")
+            return redirect(url_for("schedule"))
+
+        connection = db_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO course_schedule (faculty_id, course_code, academic_year, semester, weekday, starts_at, ends_at, room) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE ends_at=VALUES(ends_at), room=VALUES(room)",
+                (faculty_id, course_code, academic_year, semester, weekday, starts_at, ends_at, room)
+            )
+            connection.commit()
+            flash("Class slot successfully added to the timetable.", "success")
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+        return redirect(url_for("schedule"))
+
     sql = (
-        "SELECT s.weekday,s.starts_at,s.ends_at,s.room,c.course_code,c.title,c.credits, "
-        "CONCAT_WS(' ',f.first_name,f.last_name) AS faculty_name "
-        "FROM course_schedule s JOIN courses c ON c.course_code=s.course_code "
-        "JOIN faculty f ON f.id=s.faculty_id WHERE s.academic_year=%s AND s.semester=%s"
+        "SELECT s.schedule_id, s.weekday, s.starts_at, s.ends_at, s.room, c.course_code, c.title, c.credits, "
+        "CONCAT_WS(' ', f.first_name, f.last_name) AS faculty_name "
+        "FROM course_schedule s "
+        "JOIN courses c ON c.course_code = s.course_code "
+        "JOIN faculty f ON f.id = s.faculty_id "
+        "WHERE s.academic_year = %s AND s.semester = %s"
     )
     params = [academic_year, semester]
     if user["typeofuser"] == "student":
-        sql += " AND EXISTS (SELECT 1 FROM course_enrollments ce WHERE ce.student_id=%s AND ce.course_code=s.course_code AND ce.academic_year=s.academic_year AND ce.semester=s.semester AND ce.status='approved')"
+        sql += " AND EXISTS (SELECT 1 FROM course_enrollments ce WHERE ce.student_id = %s AND ce.course_code = s.course_code AND ce.academic_year = s.academic_year AND ce.semester = s.semester AND ce.status = 'approved')"
         params.append(user["id"])
     elif user["typeofuser"] == "faculty":
-        sql += " AND s.faculty_id=%s"
+        sql += " AND s.faculty_id = %s"
         params.append(user["id"])
-    rows = query(sql + " ORDER BY s.weekday,s.starts_at,c.course_code", tuple(params))
-    return render_template("schedule.html", rows=rows, academic_year=academic_year, semester=semester)
+
+    rows = query(sql + " ORDER BY s.weekday, s.starts_at, c.course_code", tuple(params))
+    for r in rows:
+        r["formatted_time"] = f"{format_time_delta(r['starts_at'])} – {format_time_delta(r['ends_at'])}"
+
+    courses = query("SELECT course_code, title FROM courses ORDER BY course_code") if can_manage else []
+    faculty_list = query("SELECT id, CONCAT_WS(' ', first_name, last_name) AS name FROM faculty ORDER BY first_name") if can_manage else []
+
+    return render_template(
+        "schedule.html",
+        rows=rows,
+        academic_year=academic_year,
+        semester=semester,
+        can_manage=can_manage,
+        courses=courses,
+        faculty_list=faculty_list
+    )
+
+
+@app.post("/schedule/<int:schedule_id>/delete")
+@roles_required("admin", "superadmin")
+def schedule_delete(schedule_id):
+    connection = db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("DELETE FROM course_schedule WHERE schedule_id = %s", (schedule_id,))
+        connection.commit()
+        flash("Class slot removed from schedule.", "success")
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return redirect(url_for("schedule"))
 
 
 @app.route("/announcements", methods=["GET", "POST"])
